@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { ReservaFilters } from "@/types/reserva";
 
 // 1. Obtener Catálogo de Laboratorios
 export const getLaboratorios = async () => {
@@ -37,7 +38,6 @@ export const getDisponibilidad = async (laboratorioId: string, fecha: string) =>
     return data || [];
 };
 
-// 4. NUEVO: Llamada al RPC de Nicolás para procesar la reserva completa
 export const crearSolicitudReserva = async (solicitud: {
     laboratorio_id: string;
     fecha: string;
@@ -73,4 +73,61 @@ export const crearSolicitudReserva = async (solicitud: {
     }
 
     return data;
+};
+
+export const getMisReservas = async (
+    page: number = 1,
+    pageSize: number = 10,
+    filters?: ReservaFilters
+) => {
+    const supabase = createClient();
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    // Iniciamos la consulta base
+    let query = supabase
+        .from('reservas')
+        .select(`
+            id,
+            fecha,
+            materia_actividad,
+            estado,
+            periodo_modulo,
+            periodo_anio,
+            laboratorios(nombre),
+            bloques_horarios(hora_inicio, hora_fin)
+        `, { count: 'exact' });
+
+    // Aplicación dinámica de filtros (Patrón arquitectónico de Query Builder)
+    if (filters?.estado) query = query.eq('estado', filters.estado);
+    if (filters?.laboratorio_id) query = query.eq('laboratorio_id', filters.laboratorio_id);
+    if (filters?.modulo) query = query.eq('periodo_modulo', filters.modulo);
+    if (filters?.anio) query = query.eq('periodo_anio', filters.anio);
+    if (filters?.fecha) query = query.eq('fecha', filters.fecha);
+
+    // Búsqueda por texto (ILIKE es insensible a mayúsculas/minúsculas)
+    if (filters?.materia) {
+        query = query.ilike('materia_actividad', `%${filters.materia}%`);
+    }
+
+    const { data, error, count } = await query
+        .order('fecha', { ascending: false })
+        .range(from, to);
+
+    if (error) throw new Error(error.message);
+
+    return { data, count };
+};
+
+export const cancelarReserva = async (reservaId: string, motivo: string) => {
+    const supabase = createClient();
+
+    // Llamada a la función de base de datos 'cancelar_reserva'
+    const { error } = await supabase.rpc('cancelar_reserva', {
+        p_reserva_id: reservaId,
+        p_motivo: motivo
+    });
+
+    if (error) throw new Error(error.message);
+    return true;
 };

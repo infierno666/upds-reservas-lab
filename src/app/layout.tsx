@@ -1,7 +1,11 @@
 // Ruta: src/app/layout.tsx
+import QueryProvider from "@/providers/QueryProvider";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,10 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" className={cn("font-sans", geist.variable)}>
       {/* Inyectamos la variable de la fuente en el body */}
       <body className={`${inter.variable} font-sans antialiased bg-[#F8FAFC]`}>
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
+
       </body>
     </html>
   );
