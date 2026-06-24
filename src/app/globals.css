@@ -1,26 +1,66 @@
+/* Ruta: src/app/globals.css */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* --------------------------------------------------------
+   1. DESIGN TOKENS (Extraídos del UI Kit de la UPDS)
+-------------------------------------------------------- */
+@theme {
+  /* Tipografía */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Paleta Corporativa UPDS */
+  --color-upds-primary: #004B87;
+  --color-upds-secondary: #E6F0F8;
+  --color-upds-tertiary: #0EA5E9;
+  --color-upds-neutral: #6B7280;
+
+  /* Colores Funcionales (Inferidos y necesarios para UI) */
+  --color-upds-destructive: #DC2626;
+  /* Rojo para alertas/eliminar */
+  --color-upds-success: #16A34A;
+  /* Verde para aprobados */
+
+  /* --------------------------------------------------------
+     2. VARIABLES PARA COMPONENTES (Preparación para Shadcn)
+  -------------------------------------------------------- */
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #004B87;
+  /* El ring de focus usará el Primary corporativo */
+
+  /* Radios de borde según el UI Kit */
+  --radius-lg: 0.75rem;
+  /* rounded-xl visual */
+  --radius-md: 0.5rem;
+  --radius-sm: 0.25rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* --------------------------------------------------------
+   3. ESTILOS BASE Y RESET
+-------------------------------------------------------- */
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    @apply text-foreground;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* --------------------------------------------------------
+   4. COMPONENTES UTILITARIOS PERSONALIZADOS
+-------------------------------------------------------- */
+@layer utilities {
+
+  /* Efecto Glassmorphism requerido para el Login y Modales */
+  .glass-panel {
+    @apply bg-white/60 backdrop-blur-lg border border-white/40 shadow-2xl;
+  }
 }
