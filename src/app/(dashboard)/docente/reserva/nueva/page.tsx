@@ -1,286 +1,253 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, FlaskConical, BookOpen, Clock, Send, CheckCircle2, AlertTriangle, X } from "lucide-react";
-import { getLaboratorios, getBloquesHorarios, getDisponibilidad, crearSolicitudReserva } from "@/lib/services/reservaService";
+import { Loader2, CalendarCheck } from "lucide-react";
+import { 
+    getLaboratorios, 
+    getBloquesHorarios, 
+    getDisponibilidadRango, 
+    crearReservaMasiva, 
+    actualizarReserva
+} from "@/lib/services/reservaService";
+import { calcularFechasVisibles, formatearFecha } from "@/lib/utils/dateUtils";
+import { useSearchParams } from 'next/navigation'; // Importa esto
+import { ReservaSidebarConfig } from "@/components/reservas/ReservaSidebarConfig";
+import { ShiftGridSelector } from "@/components/reservas/ShiftGridSelector";
+import { CustomModal } from "@/components/ui/CustomModal";
+
+interface CeldaSeleccionada {
+    fecha: string;
+    bloqueId: number;
+}
 
 export default function NuevaReservaPage() {
-    // --- ESTADOS DE CATÁLOGOS Y DATA ---
+
+    const searchParams = useSearchParams();
+    const isEditMode = searchParams.get('edit') === 'true';
+    const reservaId = searchParams.get('id');
     const [laboratorios, setLaboratorios] = useState<any[]>([]);
     const [bloques, setBloques] = useState<any[]>([]);
+
+    const [vista, setVista] = useState<'semana' | 'mes'>('semana');
+    const [fechaPivote, setFechaPivote] = useState(formatearFecha(new Date()));
+    const [fechasVisibles, setFechasVisibles] = useState<Date[]>([]);
+
     const [disponibilidad, setDisponibilidad] = useState<any[]>([]);
-
-    // --- ESTADOS DEL FORMULARIO (Adaptado al SQL de Nicolás) ---
-    const [fecha, setFecha] = useState("");
-    const [labSeleccionado, setLabSeleccionado] = useState("");
-    const [materiaActividad, setMateriaActividad] = useState("");
-    const [periodoModulo, setPeriodoModulo] = useState("1"); // 1 al 12
-    const [periodoAnio, setPeriodoAnio] = useState(new Date().getFullYear().toString()); // Año actual
-
-    const [bloquesSeleccionados, setBloquesSeleccionados] = useState<number[]>([]);
-
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingGrid, setIsLoadingGrid] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-    // --- EFECTO INICIAL ---
+    // Estado del Modal
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type: 'success' | 'error' | 'confirm';
+        title: string;
+        message: string;
+        onConfirm?: () => void;
+    }>({ isOpen: false, type: 'success', title: '', message: '' });
+
+    const [labSeleccionado, setLabSeleccionado] = useState("");
+    const [materiaSeleccionada, setMateriaSeleccionada] = useState("");
+    const [periodoModulo, setPeriodoModulo] = useState("1");
+    const [periodoAnio, setPeriodoAnio] = useState(new Date().getFullYear().toString());
+    const [seleccion, setSeleccion] = useState<CeldaSeleccionada[]>([]);
+
+    // Efecto para precargar datos si es modo edición
     useEffect(() => {
-        const initData = async () => {
-            try {
-                const [labsData, bloquesData] = await Promise.all([
-                    getLaboratorios(),
-                    getBloquesHorarios()
-                ]);
-                setLaboratorios(labsData);
-                setBloques(bloquesData);
-            } catch (error) {
-                console.error("Error cargando catálogos:", error);
-            }
-        };
-        initData();
+        if (isEditMode) {
+            setLabSeleccionado(searchParams.get('lab') || "");
+            setMateriaSeleccionada(searchParams.get('materia') || "");
+            setFechaPivote(searchParams.get('fecha') || formatearFecha(new Date()));
+            // Aquí podrías marcar automáticamente el bloque en la grilla si quisieras
+        }
+    }, [isEditMode]);
+    useEffect(() => {
+        // Ya no traemos getMaterias, la base de datos espera texto libre
+        Promise.all([getLaboratorios(), getBloquesHorarios()]).then(([labs, blqs]) => {
+            setLaboratorios(labs);
+            setBloques(blqs);
+        });
     }, []);
 
-    // --- CARGA DE DISPONIBILIDAD ---
     useEffect(() => {
-        setBloquesSeleccionados([]);
-        setErrorMessage(null);
-
-        if (fecha && labSeleccionado) {
-            const fetchDisponibilidad = async () => {
-                setIsLoading(true);
-                try {
-                    const data = await getDisponibilidad(labSeleccionado, fecha);
-                    setDisponibilidad(data);
-                } catch (error) {
-                    console.error("Error:", error);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchDisponibilidad();
-        }
-    }, [fecha, labSeleccionado]);
-
-    // --- LÓGICA DE CLICKS EN LA GRILLA (Máx 2 Continuos) ---
-    const handleBloqueClick = (bloqueId: number) => {
-        setErrorMessage(null);
-
-        if (bloquesSeleccionados.includes(bloqueId)) {
-            setBloquesSeleccionados(bloquesSeleccionados.filter(id => id !== bloqueId));
-            return;
-        }
-
-        if (bloquesSeleccionados.length >= 2) {
-            setErrorMessage("Regla de negocio: Solo está permitido reservar un máximo de 2 periodos continuos.");
-            return;
-        }
-
-        if (bloquesSeleccionados.length === 1) {
-            const primerId = bloquesSeleccionados[0];
-            const idxPrimer = bloques.findIndex(b => b.id === primerId);
-            const idxSegundo = bloques.findIndex(b => b.id === bloqueId);
-
-            if (Math.abs(idxPrimer - idxSegundo) !== 1) {
-                setErrorMessage("Regla de negocio: Los 2 periodos deben ser continuos.");
-                return;
+        if (!labSeleccionado || !fechaPivote) return;
+        const cargarGrilla = async () => {
+            setIsLoadingGrid(true);
+            try {
+                const rango = calcularFechasVisibles(fechaPivote, vista);
+                setFechasVisibles(rango.fechas);
+                const dispo = await getDisponibilidadRango(labSeleccionado, rango.inicio, rango.fin);
+                setDisponibilidad(dispo);
+                setSeleccion([]);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setIsLoadingGrid(false);
             }
-        }
+        };
+        cargarGrilla();
+    }, [labSeleccionado, fechaPivote, vista]);
 
-        setBloquesSeleccionados([...bloquesSeleccionados, bloqueId].sort((a, b) => a - b));
+    const handleToggleCelda = (fecha: string, bloqueId: number) => {
+        setSeleccion(prev => {
+            const existe = prev.some(s => s.fecha === fecha && s.bloqueId === bloqueId);
+            if (existe) return prev.filter(s => !(s.fecha === fecha && s.bloqueId === bloqueId));
+            return [...prev, { fecha, bloqueId }];
+        });
     };
 
-    const getEstadoBloque = (bloqueId: number) => {
-        if (bloquesSeleccionados.includes(bloqueId)) {
-            return { clase: "bg-blue-600 text-white font-bold ring-2 ring-blue-600", texto: "Seleccionado", estado: "seleccionado" };
-        }
-        const registro = disponibilidad.find(d => d.bloque_horario_id === bloqueId);
-        if (!registro) return { clase: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 cursor-pointer", texto: "Libre", estado: "libre" };
-        if (registro.estado === 'aprobada') return { clase: "bg-red-50 text-red-700 border-red-200 opacity-60 cursor-not-allowed", texto: "Reservado", estado: "ocupado" };
-        if (registro.estado === 'pendiente') return { clase: "bg-yellow-50 text-yellow-700 border-yellow-200 opacity-60 cursor-not-allowed", texto: "Pendiente", estado: "pendiente" };
-        return { clase: "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed", texto: "Mantenimiento", estado: "bloqueado" };
+    const handleToggleMulti = (celdas: CeldaSeleccionada[], action: 'add' | 'remove') => {
+        setSeleccion(prev => {
+            if (action === 'remove') {
+                return prev.filter(p => !celdas.some(c => c.fecha === p.fecha && c.bloqueId === p.bloqueId));
+            } else {
+                const nuevos = celdas.filter(c => !prev.some(p => p.fecha === c.fecha && p.bloqueId === c.bloqueId));
+                return [...prev, ...nuevos];
+            }
+        });
     };
 
-    // --- ENVIAR SOLICITUD ---
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMessage(null);
-
-        if (!fecha || !labSeleccionado || !materiaActividad || !periodoModulo || !periodoAnio) {
-            setErrorMessage("Complete todos los campos del formulario.");
-            return;
-        }
-        if (bloquesSeleccionados.length === 0) {
-            setErrorMessage("Seleccione al menos 1 o 2 periodos en la grilla.");
+    // Abre el modal de confirmación antes de enviar
+    const solicitarConfirmacion = () => {
+        if (seleccion.length === 0 || !materiaSeleccionada.trim()) {
+            setModalConfig({
+                isOpen: true, type: 'error', title: 'Datos Incompletos',
+                message: 'Asegúrese de ingresar la Materia/Actividad y seleccionar al menos un bloque horario en la grilla.'
+            });
             return;
         }
 
+        setModalConfig({
+            isOpen: true, type: 'confirm', title: 'Confirmar Reservas',
+            message: `Va a registrar ${seleccion.length} bloques horarios para la actividad "${materiaSeleccionada}". Las solicitudes serán enviadas a administración para su evaluación.`,
+            onConfirm: handleSubmitReal
+        });
+    };
+
+    // Envío real a la Base de Datos
+    const handleSubmitReal = async () => {
         setIsSubmitting(true);
         try {
-            await crearSolicitudReserva({
-                laboratorio_id: labSeleccionado,
-                fecha,
-                materia_actividad: materiaActividad,
-                periodo_modulo: parseInt(periodoModulo),
-                periodo_anio: parseInt(periodoAnio),
-                bloques_ids: bloquesSeleccionados
+            if (isEditMode && reservaId) {
+                // MODO ACTUALIZACIÓN
+                await actualizarReserva(reservaId, {
+                    fecha: fechaPivote,
+                    materia_actividad: materiaSeleccionada.trim(),
+                    bloque_horario_id: seleccion[0]?.bloqueId // Asume edición de un solo bloque por ahora
+                });
+
+                setModalConfig({
+                    isOpen: true, type: 'success', title: '¡Reserva Actualizada!',
+                    message: 'La reserva ha sido modificada correctamente.'
+                });
+            } else {
+                // MODO CREACIÓN MASIVA
+                await crearReservaMasiva({
+                    laboratorio_id: labSeleccionado,
+                    materia_actividad: materiaSeleccionada.trim(),
+                    periodo_modulo: parseInt(periodoModulo),
+                    periodo_anio: parseInt(periodoAnio),
+                    bloques_ids: [...new Set(seleccion.map(s => s.bloqueId))],
+                    fechas: [...new Set(seleccion.map(s => s.fecha))]
+                });
+
+                setModalConfig({
+                    isOpen: true, type: 'success', title: '¡Solicitud Exitosa!',
+                    message: 'Sus reservas han sido procesadas correctamente.'
+                });
+            }
+
+            // Flujo común tras éxito
+            setSeleccion([]);
+            const rango = calcularFechasVisibles(fechaPivote, vista);
+            setDisponibilidad(await getDisponibilidadRango(labSeleccionado, rango.inicio, rango.fin));
+
+        } catch (error: any) {
+            setModalConfig({
+                isOpen: true, type: 'error', title: 'Error en la operación',
+                message: error.message || 'Ocurrió un problema al procesar la reserva.'
             });
-
-            // Éxito
-            setBloquesSeleccionados([]);
-            setMateriaActividad("");
-            setShowSuccessPopup(true);
-
-            // Refrescar grilla
-            const data = await getDisponibilidad(labSeleccionado, fecha);
-            setDisponibilidad(data);
-
-        } catch (err: any) {
-            setErrorMessage(err.message || "Error al procesar la reserva.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="w-full relative">
-            {errorMessage && (
-                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-xl flex items-start gap-3 shadow-xs">
-                    <AlertTriangle className="shrink-0 mt-0.5" size={18} />
-                    <p className="text-sm font-medium">{errorMessage}</p>
-                </div>
-            )}
+        <div className="w-full h-full min-h-[calc(100vh-100px)] max-w-[1600px] mx-auto flex flex-col pb-6">
 
-            <div className="mb-6 md:mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Nueva Reserva</h2>
-                <p className="text-sm md:text-base text-slate-500 mt-1">Seleccione la fecha y laboratorio para ver la disponibilidad.</p>
-            </div>
+            <CustomModal
+                isOpen={modalConfig.isOpen} type={modalConfig.type} title={modalConfig.title} message={modalConfig.message}
+                onConfirm={modalConfig.onConfirm} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+            />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">
-
-                {/* PANEL IZQUIERDO: Formulario */}
-                <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-5 md:p-6 flex flex-col gap-6">
-                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                        <BookOpen className="text-upds-primary" size={22} />
-                        <h3 className="font-semibold text-slate-800 text-base md:text-lg">Detalles Requeridos</h3>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-
-                        {/* Fecha y Laboratorio */}
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fecha Requerida *</label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-upds-primary/20 outline-none" />
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Laboratorio *</label>
-                            <div className="relative">
-                                <FlaskConical className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                <select value={labSeleccionado} onChange={(e) => setLabSeleccionado(e.target.value)} required
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-upds-primary/20 outline-none appearance-none">
-                                    <option value="" disabled>Seleccione un laboratorio...</option>
-                                    {laboratorios.map(lab => (
-                                        <option key={lab.id} value={lab.id}>{lab.nombre} (Cap: {lab.capacidad})</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Módulo y Año en 2 columnas */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Módulo *</label>
-                                <select value={periodoModulo} onChange={(e) => setPeriodoModulo(e.target.value)} required
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => (
-                                        <option key={num} value={num}>Módulo {num}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Año *</label>
-                                <input type="number" value={periodoAnio} onChange={(e) => setPeriodoAnio(e.target.value)} required min="2024" max="2030"
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
-                            </div>
-                        </div>
-
-                        {/* Materia / Actividad */}
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Materia o Actividad *</label>
-                            <div className="relative">
-                                <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                <input type="text" placeholder="Ej. Redes de Computadoras" value={materiaActividad} onChange={(e) => setMateriaActividad(e.target.value)} required
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
-                            </div>
-                        </div>
-
-                        <div className="pt-4">
-                            <button type="submit" disabled={isSubmitting}
-                                className="w-full bg-upds-primary hover:bg-upds-primary/95 text-white font-semibold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] disabled:opacity-75">
-                                <Send size={18} />
-                                {isSubmitting ? "Enviando Solicitud..." : "Enviar Solicitud"}
-                            </button>
-                        </div>
-                    </form>
+            {/* Cabecera */}
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 shrink-0">
+                <div>
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                        <CalendarCheck className="text-[#001D4A]" size={32} /> Nueva Reserva
+                    </h2>
+                    <p className="text-slate-500 font-medium mt-1">Busque disponibilidad real y asigne bloques masivos.</p>
                 </div>
 
-                {/* PANEL DERECHO: La Grilla */}
-                <div className="lg:col-span-2 flex flex-col gap-6 w-full min-w-0">
-                    <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-                        <div className="flex flex-wrap items-center gap-4">
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div><span className="text-xs text-slate-600">Libre</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-600"></div><span className="text-xs text-slate-600">Seleccionado</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><span className="text-xs text-slate-600">Ocupado</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-yellow-500"></div><span className="text-xs text-slate-600">Pendiente</span></div>
-                        </div>
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-3 py-1 rounded-full">Matriz de Turnos</div>
-                    </div>
-
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-5 md:p-6 min-h-[350px] flex flex-col justify-center">
-                        {!fecha || !labSeleccionado ? (
-                            <div className="flex flex-col items-center justify-center text-slate-400 space-y-3 py-12">
-                                <Clock size={44} className="opacity-40" />
-                                <p className="text-sm">Seleccione fecha y laboratorio para cargar la grilla.</p>
-                            </div>
-                        ) : isLoading ? (
-                            <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-upds-primary"></div></div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-                                {bloques.map((bloque) => {
-                                    const estadoInfo = getEstadoBloque(bloque.id);
-                                    return (
-                                        <button key={bloque.id} type="button"
-                                            disabled={estadoInfo.estado !== 'libre' && estadoInfo.estado !== 'seleccionado'}
-                                            onClick={() => handleBloqueClick(bloque.id)}
-                                            className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${estadoInfo.clase}`}>
-                                            <span className="text-xs font-bold opacity-75">{bloque.hora_inicio.slice(0, 5)} - {bloque.hora_fin.slice(0, 5)}</span>
-                                            <span className="font-semibold text-sm">{estadoInfo.texto}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
+                <div className="flex bg-slate-200/60 p-1.5 rounded-xl border border-slate-200/50 w-full sm:w-auto shadow-sm">
+                    <button onClick={() => setVista('semana')} className={`flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'semana' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>Semana</button>
+                    <button onClick={() => setVista('mes')} className={`flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'mes' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>Mes</button>
                 </div>
             </div>
 
-            {/* POPUP DE ÉXITO */}
-            {showSuccessPopup && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-slate-100 relative text-center flex flex-col items-center">
-                        <button onClick={() => setShowSuccessPopup(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={18} /></button>
-                        <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4"><CheckCircle2 size={28} /></div>
-                        <h4 className="text-lg font-bold text-slate-800 mb-1">¡Solicitud Enviada!</h4>
-                        <p className="text-sm text-slate-500 mb-6">La reserva de laboratorio se registró con estado <span className="text-yellow-600 font-semibold">Pendiente</span> para evaluación.</p>
-                        <button onClick={() => setShowSuccessPopup(false)} className="w-full bg-upds-primary hover:bg-upds-primary/95 text-white font-medium py-2.5 px-4 rounded-xl text-sm">Entendido</button>
-                    </div>
+            {/* Layout Principal Flex */}
+            <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[600px]">
+
+                {/* Columna Izquierda: Configuración */}
+                <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-4 h-full">
+                    <ReservaSidebarConfig
+                        laboratorios={laboratorios}
+                        labSeleccionado={labSeleccionado} setLabSeleccionado={setLabSeleccionado}
+                        materiaSeleccionada={materiaSeleccionada} setMateriaSeleccionada={setMateriaSeleccionada}
+                        periodoModulo={periodoModulo} setPeriodoModulo={setPeriodoModulo}
+                        periodoAnio={periodoAnio} setPeriodoAnio={setPeriodoAnio}
+                        fechaPivote={fechaPivote} setFechaPivote={setFechaPivote}
+                        cantidadSeleccionada={seleccion.length}
+                    />
+
+                    <button
+                        onClick={solicitarConfirmacion}
+                        disabled={seleccion.length === 0 || !materiaSeleccionada.trim() || isSubmitting}
+                        className="w-full bg-[#001D4A] hover:bg-[#001D4A]/90 text-white font-bold py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex justify-center items-center gap-3"
+                    >
+                        {isSubmitting ? <Loader2 size={22} className="animate-spin" /> : <CalendarCheck size={22} />}
+                        {isSubmitting ? "Procesando Sistema..." : `Procesar Solicitud`}
+                    </button>
                 </div>
-            )}
+
+                {/* Columna Derecha: Grilla interactiva */}
+                <div className="flex-1 min-w-0 bg-white rounded-3xl flex flex-col h-full shadow-sm border border-slate-200 overflow-hidden">
+                    {!labSeleccionado ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-5 p-8 bg-slate-50/50">
+                            <div className="w-24 h-24 bg-white shadow-sm rounded-full flex items-center justify-center border border-slate-100">
+                                <CalendarCheck size={40} className="text-slate-300" />
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-xl font-bold text-slate-700 mb-1">Sin espacio seleccionado</h3>
+                                <p className="font-medium text-slate-500 max-w-sm">Por favor, seleccione un laboratorio en el panel izquierdo para cargar su disponibilidad.</p>
+                            </div>
+                        </div>
+                    ) : isLoadingGrid ? (
+                        <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-slate-50/50">
+                            <Loader2 size={48} className="animate-spin text-[#001D4A]" />
+                            <p className="text-slate-500 font-medium animate-pulse">Sincronizando horarios...</p>
+                        </div>
+                    ) : (
+                        <ShiftGridSelector
+                            bloques={bloques}
+                            fechasVisibles={fechasVisibles}
+                            disponibilidad={disponibilidad}
+                            seleccion={seleccion}
+                            onToggleCelda={handleToggleCelda}
+                            onToggleMulti={handleToggleMulti}
+                        />
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
