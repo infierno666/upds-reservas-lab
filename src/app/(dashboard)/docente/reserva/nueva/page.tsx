@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-// SOLUCIÓN: Agregamos las importaciones de los íconos faltantes que TypeScript reclama
 import { Loader2, CalendarCheck, CalendarDays, CalendarRange, MapPin } from "lucide-react";
 import {
     getLaboratorios,
@@ -15,6 +14,7 @@ import { useSearchParams } from 'next/navigation';
 import { ReservaSidebarConfig } from "@/components/reservas/ReservaSidebarConfig";
 import { ShiftGridSelector } from "@/components/reservas/ShiftGridSelector";
 import { CustomModal } from "@/components/ui/CustomModal";
+import { CalendarNavigator } from "@/components/reservas/CalendarNavigator";
 
 interface CeldaSeleccionada {
     fecha: string;
@@ -24,7 +24,7 @@ interface CeldaSeleccionada {
 export default function NuevaReservaPage() {
     const searchParams = useSearchParams();
     const isEditMode = searchParams.get('edit') === 'true';
-    
+
     // Catálogos e Infraestructura
     const [laboratorios, setLaboratorios] = useState<any[]>([]);
     const [bloques, setBloques] = useState<any[]>([]);
@@ -35,7 +35,7 @@ export default function NuevaReservaPage() {
     const [fechaPivote, setFechaPivote] = useState(formatearFecha(new Date()));
     const [fechasVisibles, setFechasVisibles] = useState<Date[]>([]);
     const [disponibilidad, setDisponibilidad] = useState<any[]>([]);
-    
+
     // Estados de Carga y Sincronización
     const [isLoadingGrid, setIsLoadingGrid] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,10 +43,10 @@ export default function NuevaReservaPage() {
 
     // Configuración del Feedback Operativo (Modal)
     const [modalConfig, setModalConfig] = useState<{
-        isOpen: boolean; 
-        type: 'success' | 'error' | 'confirm'; 
-        title: string; 
-        message: string; 
+        isOpen: boolean;
+        type: 'success' | 'error' | 'confirm';
+        title: string;
+        message: string;
         onConfirm?: () => void;
     }>({ isOpen: false, type: 'success', title: '', message: '' });
 
@@ -89,7 +89,7 @@ export default function NuevaReservaPage() {
                 setFechasVisibles(rango.fechas);
                 const dispo = await getDisponibilidadRango(labSeleccionado, rango.inicio, rango.fin);
                 setDisponibilidad(dispo);
-                setSeleccion([]); 
+                setSeleccion([]);
             } catch (error) {
                 console.error(error);
             } finally {
@@ -143,7 +143,7 @@ export default function NuevaReservaPage() {
                 materia_id: materiaIdSeleccionada,
                 periodo_modulo: parseInt(periodoModulo),
                 periodo_anio: parseInt(periodoAnio),
-                selecciones: seleccion 
+                selecciones: seleccion
             });
 
             setModalConfig({
@@ -192,16 +192,25 @@ export default function NuevaReservaPage() {
 
                 <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-sm">
                     <button onClick={() => setVista('semana')} className={`flex items-center justify-center gap-2 flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'semana' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>
-                        <CalendarDays size={16}/> Semana
+                        <CalendarDays size={16} /> Semana
                     </button>
                     <button onClick={() => setVista('mes')} className={`flex items-center justify-center gap-2 flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'mes' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>
-                        <CalendarRange size={16}/> Mes
+                        <CalendarRange size={16} /> Mes
                     </button>
                 </div>
             </div>
 
+            <div className="flex flex-wrap items-center justify-between w-full p-4 gap-4 bg-white shadow-sm">
+                <h2 className="text-lg font-bold">Calendario</h2>
+
+                <CalendarNavigator
+                    fechaPivote={fechaPivote}
+                    vista={vista}
+                    setFechaPivote={setFechaPivote}
+                />
+            </div>
             <div className="flex flex-col xl:flex-row gap-6 flex-1 min-h-[600px]">
-                
+
                 {/* Panel de Parámetros Lateral */}
                 <div className="w-full xl:w-[380px] shrink-0 flex flex-col gap-5 h-full">
                     <ReservaSidebarConfig
@@ -226,8 +235,10 @@ export default function NuevaReservaPage() {
                     </button>
                 </div>
 
+
                 {/* Grilla Interactiva */}
                 <div className="flex-1 min-w-0 bg-white rounded-3xl flex flex-col h-full shadow-sm border border-slate-200 overflow-hidden">
+
                     {!labSeleccionado ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-5 p-8 bg-slate-50/50">
                             <div className="w-24 h-24 bg-white shadow-md rounded-full flex items-center justify-center border border-slate-100">
@@ -243,7 +254,10 @@ export default function NuevaReservaPage() {
                             <Loader2 size={48} className="animate-spin text-[#001D4A]" />
                             <p className="text-slate-500 font-bold animate-pulse">Sincronizando matriz de horarios compartidos...</p>
                         </div>
+
+
                     ) : (
+
                         <ShiftGridSelector
                             bloques={bloques}
                             fechasVisibles={fechasVisibles}

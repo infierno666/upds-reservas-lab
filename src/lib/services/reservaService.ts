@@ -7,12 +7,20 @@ import { ReservaFilters } from "@/types/reserva";
 
 export const getLaboratorios = async () => {
     const supabase = createClient();
+
     const { data, error } = await supabase
         .from('laboratorios')
-        .select('id, nombre, capacidad')
+        .select(`
+            id,
+            nombre,
+            capacidad,
+            caracteristicas,
+            estado_operativo
+        `)
         .order('nombre', { ascending: true });
 
     if (error) throw new Error(error.message);
+
     return data;
 };
 

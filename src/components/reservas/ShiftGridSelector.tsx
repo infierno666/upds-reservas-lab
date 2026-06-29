@@ -90,8 +90,55 @@ export function ShiftGridSelector({ bloques, fechasVisibles, disponibilidad, sel
         return { label: 'Mantenimiento', clase: 'bg-red-50 border-red-200 text-red-500 opacity-60 cursor-not-allowed' };
     };
 
+    const rangoTexto = () => {
+
+        if (fechasVisibles.length === 0)
+            return "";
+
+
+        const inicio = fechasVisibles[0];
+
+        const fin = fechasVisibles[
+            fechasVisibles.length - 1
+        ];
+
+
+        return `
+
+${inicio.toLocaleDateString(
+            "es-ES",
+            {
+                day: "numeric",
+                month: "short"
+            }
+        )}
+
+-
+
+${fin.toLocaleDateString(
+            "es-ES",
+            {
+                day: "numeric",
+                month: "short"
+            }
+        )}
+
+`;
+
+    }
+
     return (
         <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+
+            <p className="
+text-xs
+font-bold
+text-slate-400
+">
+
+                {rangoTexto()}
+
+            </p>
 
             {/* Cabecera Superior: Tabs de Turnos y Botón Maestro */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-50 p-4 border-b border-slate-200 gap-4">
@@ -106,8 +153,8 @@ export function ShiftGridSelector({ bloques, fechasVisibles, disponibilidad, sel
                                 key={turno.id}
                                 onClick={() => setActiveShift(turno.id)}
                                 className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isActive
-                                        ? 'bg-white text-blue-700 shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                    ? 'bg-white text-blue-700 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                                     }`}
                             >
                                 <Icon size={16} className={isActive ? "text-blue-600" : ""} />
@@ -122,8 +169,8 @@ export function ShiftGridSelector({ bloques, fechasVisibles, disponibilidad, sel
                     onClick={handleMasterToggle}
                     disabled={libresDelTurno.length === 0}
                     className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all w-full sm:w-auto ${isAllSelected
-                            ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                            : 'bg-[#001D4A] text-white hover:bg-[#001D4A]/90 shadow-md'
+                        ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                        : 'bg-[#001D4A] text-white hover:bg-[#001D4A]/90 shadow-md'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                     {isAllSelected ? <Square size={16} /> : <CheckSquare size={16} />}

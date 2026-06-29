@@ -1,12 +1,11 @@
 "use client";
 
 import React from "react";
-import { MapPin, CalendarDays, BookOpen, Clock, Calendar as CalendarIcon, Trash2 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
-import { formatearFecha } from "@/lib/utils/dateUtils";
+import { MapPin, BookOpen, Clock, Trash2 } from "lucide-react";
 
+import { formatearFecha } from "@/lib/utils/dateUtils";
+import { LaboratoryCards } from "./LaboratoryCards";
+import { ReservationCalendar } from "./ReservationCalendar";
 interface Props {
     laboratorios: any[];
     materias: any[];
@@ -53,21 +52,34 @@ export function ReservaSidebarConfig({
             </div>
 
             <div className="space-y-6 flex-1 z-10">
-                {/* 1. Laboratorio */}
-                <div className="space-y-2.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Espacio Físico</label>
-                    <select
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-[#001D4A]/30 outline-none transition-all cursor-pointer hover:bg-slate-100/50 appearance-none"
-                        value={labSeleccionado}
-                        onChange={(e) => setLabSeleccionado(e.target.value)}
-                    >
-                        <option value="" className="text-slate-400">Seleccione un laboratorio...</option>
-                        {laboratorios.map(lab => (
-                            <option key={lab.id} value={lab.id}>{lab.nombre} (Cap: {lab.capacidad})</option>
-                        ))}
-                    </select>
-                </div>
 
+                <div className="space-y-3">
+
+                    <label className="
+text-xs
+font-bold
+text-slate-500
+uppercase
+tracking-wider
+">
+
+                        Espacio físico
+
+                    </label>
+
+
+                    <LaboratoryCards
+
+                        laboratorios={laboratorios}
+
+                        laboratorioSeleccionado={labSeleccionado}
+
+                        setLaboratorioSeleccionado={setLabSeleccionado}
+
+                    />
+
+
+                </div>
                 {/* 2. Materia / Actividad */}
                 <div className="space-y-2.5">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
@@ -107,22 +119,15 @@ export function ReservaSidebarConfig({
                 </div>
 
                 {/* 4. Fecha Pivote con Shadcn Calendar */}
-                <div className="space-y-2.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                        Fecha de Referencia
-                    </label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start text-left font-semibold border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-xl py-6 text-slate-700 transition-all">
-                                <CalendarIcon className="mr-3 h-5 w-5 text-[#001D4A]" />
-                                {dateObj ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'long' }).format(dateObj) : "Seleccione una fecha"}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 rounded-2xl border-slate-200 shadow-xl" align="center">
-                            <Calendar mode="single" selected={dateObj} onSelect={handleDateSelect} />
-                        </PopoverContent>
-                    </Popover>
-                </div>
+                {/* Calendario fijo */}
+
+                <ReservationCalendar
+
+                    fechaPivote={fechaPivote}
+
+                    setFechaPivote={setFechaPivote}
+
+                />
             </div>
 
             {/* Panel de Resumen Premium */}
