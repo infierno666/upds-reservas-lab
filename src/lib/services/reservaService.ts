@@ -27,6 +27,18 @@ export const getBloquesHorarios = async () => {
     return data;
 };
 
+// NUEVO: Obtenemos las materias de la tabla 'materias'
+export const getMaterias = async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('materias')
+        .select('id, nombre')
+        .order('nombre', { ascending: true });
+
+    if (error) throw new Error(error.message);
+    return data;
+};
+
 // =========================================================================
 // 2. MOTOR DE DISPONIBILIDAD
 // =========================================================================
@@ -50,29 +62,39 @@ export const getDisponibilidadRango = async (laboratorioId: string, fechaInicio:
 
 export const crearReservaMasiva = async (solicitudMasiva: {
     laboratorio_id: string;
-    fechas: string[];
-    materia_actividad: string; // TEXTO
+    materia_id: string; // <-- AHORA USAMOS EL ID DE LA MATERIA
     periodo_modulo: number;
     periodo_anio: number;
-    bloques_ids: number[];
+    selecciones: { fecha: string; bloqueId: number }[];
 }) => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Sesión expirada. Inicie sesión nuevamente.");
 
-    if (solicitudMasiva.fechas.length === 0) {
-        throw new Error("Debe seleccionar al menos una fecha.");
+    if (!solicitudMasiva.selecciones || solicitudMasiva.selecciones.length === 0) {
+        throw new Error("Debe seleccionar al menos un bloque.");
     }
 
-    const promesas = solicitudMasiva.fechas.map(async (fecha) => {
-        // ENVIAMOS LOS PARÁMETROS EXACTOS DEL SCRIPT SQL
+    // MAGIA: Generamos UN SOLO ID para toda la solicitud
+    const grupoSolicitudId = crypto.randomUUID();
+
+    // Agrupamos los bloques por fecha
+    const agrupadoPorFecha = solicitudMasiva.selecciones.reduce((acc, curr) => {
+        if (!acc[curr.fecha]) acc[curr.fecha] = [];
+        acc[curr.fecha].push(curr.bloqueId);
+        return acc;
+    }, {} as Record<string, number[]>);
+
+    // Lanzamos las peticiones usando el mismo grupoSolicitudId para todas
+    const promesas = Object.entries(agrupadoPorFecha).map(async ([fecha, bloquesIds]) => {
         const { data, error } = await supabase.rpc('solicitar_reserva', {
             p_laboratorio_id: solicitudMasiva.laboratorio_id,
             p_fecha: fecha,
-            p_bloques_horario_ids: solicitudMasiva.bloques_ids,
+            p_bloques_horario_ids: bloquesIds,
             p_periodo_modulo: solicitudMasiva.periodo_modulo,
             p_periodo_anio: solicitudMasiva.periodo_anio,
-            p_materia_actividad: solicitudMasiva.materia_actividad // LLAVE CORREGIDA
+            p_materia_id: solicitudMasiva.materia_id, // Enviamos el ID relacional
+            p_grupo_id: grupoSolicitudId // Enviamos el ID agrupador
         });
 
         if (error) throw new Error(`Error en fecha ${fecha}: ${error.message}`);
@@ -102,36 +124,40 @@ export const crearReservaMasiva = async (solicitudMasiva: {
 
 export const getMisReservas = async (
     page: number = 1,
-    pageSize: number = 10,
-    filters?: ReservaFilters
+    pageSize: number = 50,
+    filters?: any
 ) => {
     const supabase = createClient();
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
+    // SOLUCIÓN: Strings de selección limpios de comentarios para evitar el error de PostgREST
+    const stringQuery = filters?.materia_actividad
+        ? "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias!inner(id, nombre)"
+        : "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias(id, nombre)";
+
     let query = supabase
         .from('reservas')
-        .select(`
-            id,
-            grupo_solicitud_id,
-            fecha,
-            estado,
-            periodo_modulo,
-            periodo_anio,
-            materia_actividad, 
-            laboratorios(nombre),
-            bloques_horarios(hora_inicio, hora_fin)
-        `, { count: 'exact' });
+        .select(stringQuery, { count: 'exact' });
 
+    // Aplicación de Filtros Estrictos
     if (filters?.estado) query = query.eq('estado', filters.estado);
     if (filters?.laboratorio_id) query = query.eq('laboratorio_id', filters.laboratorio_id);
-    if (filters?.modulo) query = query.eq('periodo_modulo', filters.modulo);
-    if (filters?.anio) query = query.eq('periodo_anio', filters.anio);
-    if (filters?.fecha) query = query.eq('fecha', filters.fecha);
-    if (filters?.materia_actividad) query = query.ilike('materia_actividad', `%${filters.materia_actividad}%`);
+
+    // Filtro por fecha en la que se HIZO la solicitud
+    if (filters?.fecha) {
+        query = query
+            .gte('created_at', `${filters.fecha}T00:00:00.000Z`)
+            .lte('created_at', `${filters.fecha}T23:59:59.999Z`);
+    }
+
+    // Búsqueda parcial por el nombre real de la asignatura en la tabla relacional
+    if (filters?.materia_actividad) {
+        query = query.ilike('materias.nombre', `%${filters.materia_actividad}%`);
+    }
 
     const { data, error, count } = await query
-        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(from, to);
 
     if (error) throw new Error(error.message);
@@ -150,8 +176,6 @@ export const cancelarReserva = async (reservaId: string, motivo: string) => {
 
 export const cancelarGrupoReservas = async (grupoId: string, motivo: string) => {
     const supabase = createClient();
-
-    // 1. Obtenemos todas las reservas de ese grupo
     const { data: reservas, error: fetchError } = await supabase
         .from('reservas')
         .select('id')
@@ -159,11 +183,7 @@ export const cancelarGrupoReservas = async (grupoId: string, motivo: string) => 
 
     if (fetchError) throw new Error(fetchError.message);
 
-    // 2. Cancelamos cada una de ellas
-    const promesas = reservas.map((res: any) =>
-        cancelarReserva(res.id, motivo)
-    );
-
+    const promesas = reservas.map((res: any) => cancelarReserva(res.id, motivo));
     return Promise.all(promesas);
 };
 
@@ -182,7 +202,7 @@ export const resolverSolicitud = async (solicitud: { reserva_ids: string[], nuev
 export const actualizarReserva = async (reservaId: string, nuevosDatos: {
     fecha?: string;
     bloque_horario_id?: number;
-    materia_actividad?: string;
+    materia_id?: string;
 }) => {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -190,11 +210,11 @@ export const actualizarReserva = async (reservaId: string, nuevosDatos: {
         .update({
             fecha: nuevosDatos.fecha,
             bloque_horario_id: nuevosDatos.bloque_horario_id,
-            materia_actividad: nuevosDatos.materia_actividad,
+            materia_id: nuevosDatos.materia_id, // ACTUALIZADO A MATERIA_ID
             updated_at: new Date().toISOString()
         })
         .eq('id', reservaId)
-        .eq('estado', 'pendiente'); // SEGURIDAD: Solo permite editar si sigue pendiente
+        .eq('estado', 'pendiente');
 
     if (error) throw new Error(error.message);
     return data;

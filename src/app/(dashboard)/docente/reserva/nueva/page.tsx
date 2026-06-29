@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2, CalendarCheck } from "lucide-react";
-import { 
-    getLaboratorios, 
-    getBloquesHorarios, 
-    getDisponibilidadRango, 
-    crearReservaMasiva, 
-    actualizarReserva
+import React, { useState, useEffect } from "react";
+// SOLUCIÓN: Agregamos las importaciones de los íconos faltantes que TypeScript reclama
+import { Loader2, CalendarCheck, CalendarDays, CalendarRange, MapPin } from "lucide-react";
+import {
+    getLaboratorios,
+    getBloquesHorarios,
+    getMaterias,
+    getDisponibilidadRango,
+    crearReservaMasiva
 } from "@/lib/services/reservaService";
 import { calcularFechasVisibles, formatearFecha } from "@/lib/utils/dateUtils";
-import { useSearchParams } from 'next/navigation'; // Importa esto
+import { useSearchParams } from 'next/navigation';
 import { ReservaSidebarConfig } from "@/components/reservas/ReservaSidebarConfig";
 import { ShiftGridSelector } from "@/components/reservas/ShiftGridSelector";
 import { CustomModal } from "@/components/ui/CustomModal";
@@ -21,53 +22,64 @@ interface CeldaSeleccionada {
 }
 
 export default function NuevaReservaPage() {
-
     const searchParams = useSearchParams();
     const isEditMode = searchParams.get('edit') === 'true';
-    const reservaId = searchParams.get('id');
+    
+    // Catálogos e Infraestructura
     const [laboratorios, setLaboratorios] = useState<any[]>([]);
     const [bloques, setBloques] = useState<any[]>([]);
+    const [materias, setMaterias] = useState<any[]>([]);
 
+    // Estados de Control de la Grilla de Tiempo
     const [vista, setVista] = useState<'semana' | 'mes'>('semana');
     const [fechaPivote, setFechaPivote] = useState(formatearFecha(new Date()));
     const [fechasVisibles, setFechasVisibles] = useState<Date[]>([]);
-
     const [disponibilidad, setDisponibilidad] = useState<any[]>([]);
+    
+    // Estados de Carga y Sincronización
     const [isLoadingGrid, setIsLoadingGrid] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(true);
 
-    // Estado del Modal
+    // Configuración del Feedback Operativo (Modal)
     const [modalConfig, setModalConfig] = useState<{
-        isOpen: boolean;
-        type: 'success' | 'error' | 'confirm';
-        title: string;
-        message: string;
+        isOpen: boolean; 
+        type: 'success' | 'error' | 'confirm'; 
+        title: string; 
+        message: string; 
         onConfirm?: () => void;
     }>({ isOpen: false, type: 'success', title: '', message: '' });
 
+    // Estado de selección del Formulario Relacional
     const [labSeleccionado, setLabSeleccionado] = useState("");
-    const [materiaSeleccionada, setMateriaSeleccionada] = useState("");
+    const [materiaIdSeleccionada, setMateriaIdSeleccionada] = useState("");
     const [periodoModulo, setPeriodoModulo] = useState("1");
     const [periodoAnio, setPeriodoAnio] = useState(new Date().getFullYear().toString());
     const [seleccion, setSeleccion] = useState<CeldaSeleccionada[]>([]);
 
-    // Efecto para precargar datos si es modo edición
+    // Carga de datos de edición (Query Parameters)
     useEffect(() => {
         if (isEditMode) {
             setLabSeleccionado(searchParams.get('lab') || "");
-            setMateriaSeleccionada(searchParams.get('materia') || "");
+            setMateriaIdSeleccionada(searchParams.get('materiaId') || "");
             setFechaPivote(searchParams.get('fecha') || formatearFecha(new Date()));
-            // Aquí podrías marcar automáticamente el bloque en la grilla si quisieras
         }
-    }, [isEditMode]);
+    }, [isEditMode, searchParams]);
+
+    // Consumo paralelo de catálogos relacionales del sistema
     useEffect(() => {
-        // Ya no traemos getMaterias, la base de datos espera texto libre
-        Promise.all([getLaboratorios(), getBloquesHorarios()]).then(([labs, blqs]) => {
-            setLaboratorios(labs);
-            setBloques(blqs);
-        });
+        setIsLoadingCatalogs(true);
+        Promise.all([getLaboratorios(), getBloquesHorarios(), getMaterias()])
+            .then(([labs, blqs, mats]) => {
+                setLaboratorios(labs);
+                setBloques(blqs);
+                setMaterias(mats);
+            })
+            .catch(console.error)
+            .finally(() => setIsLoadingCatalogs(false));
     }, []);
 
+    // Sincronización de la grilla horaria interactiva
     useEffect(() => {
         if (!labSeleccionado || !fechaPivote) return;
         const cargarGrilla = async () => {
@@ -77,7 +89,7 @@ export default function NuevaReservaPage() {
                 setFechasVisibles(rango.fechas);
                 const dispo = await getDisponibilidadRango(labSeleccionado, rango.inicio, rango.fin);
                 setDisponibilidad(dispo);
-                setSeleccion([]);
+                setSeleccion([]); 
             } catch (error) {
                 console.error(error);
             } finally {
@@ -106,135 +118,130 @@ export default function NuevaReservaPage() {
         });
     };
 
-    // Abre el modal de confirmación antes de enviar
     const solicitarConfirmacion = () => {
-        if (seleccion.length === 0 || !materiaSeleccionada.trim()) {
+        if (seleccion.length === 0 || !materiaIdSeleccionada) {
             setModalConfig({
                 isOpen: true, type: 'error', title: 'Datos Incompletos',
-                message: 'Asegúrese de ingresar la Materia/Actividad y seleccionar al menos un bloque horario en la grilla.'
+                message: 'Asegúrese de seleccionar una asignatura de su plan académico y marcar al menos un bloque en la grilla.'
             });
             return;
         }
 
+        const mat = materias.find(m => m.id === materiaIdSeleccionada);
         setModalConfig({
-            isOpen: true, type: 'confirm', title: 'Confirmar Reservas',
-            message: `Va a registrar ${seleccion.length} bloques horarios para la actividad "${materiaSeleccionada}". Las solicitudes serán enviadas a administración para su evaluación.`,
+            isOpen: true, type: 'confirm', title: 'Confirmar Reservas Masivas',
+            message: `Va a registrar un lote de ${seleccion.length} bloques para la asignatura "${mat?.nombre}". Todas se consolidarán bajo un único número de trámite agrupado.`,
             onConfirm: handleSubmitReal
         });
     };
 
-    // Envío real a la Base de Datos
     const handleSubmitReal = async () => {
         setIsSubmitting(true);
         try {
-            if (isEditMode && reservaId) {
-                // MODO ACTUALIZACIÓN
-                await actualizarReserva(reservaId, {
-                    fecha: fechaPivote,
-                    materia_actividad: materiaSeleccionada.trim(),
-                    bloque_horario_id: seleccion[0]?.bloqueId // Asume edición de un solo bloque por ahora
-                });
+            await crearReservaMasiva({
+                laboratorio_id: labSeleccionado,
+                materia_id: materiaIdSeleccionada,
+                periodo_modulo: parseInt(periodoModulo),
+                periodo_anio: parseInt(periodoAnio),
+                selecciones: seleccion 
+            });
 
-                setModalConfig({
-                    isOpen: true, type: 'success', title: '¡Reserva Actualizada!',
-                    message: 'La reserva ha sido modificada correctamente.'
-                });
-            } else {
-                // MODO CREACIÓN MASIVA
-                await crearReservaMasiva({
-                    laboratorio_id: labSeleccionado,
-                    materia_actividad: materiaSeleccionada.trim(),
-                    periodo_modulo: parseInt(periodoModulo),
-                    periodo_anio: parseInt(periodoAnio),
-                    bloques_ids: [...new Set(seleccion.map(s => s.bloqueId))],
-                    fechas: [...new Set(seleccion.map(s => s.fecha))]
-                });
+            setModalConfig({
+                isOpen: true, type: 'success', title: '¡Operación Exitosa!',
+                message: 'Las solicitudes de espacio han sido consolidadas y enviadas a administración de manera correcta.'
+            });
 
-                setModalConfig({
-                    isOpen: true, type: 'success', title: '¡Solicitud Exitosa!',
-                    message: 'Sus reservas han sido procesadas correctamente.'
-                });
-            }
-
-            // Flujo común tras éxito
             setSeleccion([]);
             const rango = calcularFechasVisibles(fechaPivote, vista);
             setDisponibilidad(await getDisponibilidadRango(labSeleccionado, rango.inicio, rango.fin));
-
         } catch (error: any) {
             setModalConfig({
-                isOpen: true, type: 'error', title: 'Error en la operación',
-                message: error.message || 'Ocurrió un problema al procesar la reserva.'
+                isOpen: true, type: 'error', title: 'Error de Asignación',
+                message: error.message || 'Ocurrió un problema inesperado al registrar el lote en el servidor.'
             });
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    if (isLoadingCatalogs) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center flex-col gap-4">
+                <Loader2 size={48} className="animate-spin text-[#001D4A]" />
+                <p className="text-slate-500 font-bold tracking-tight animate-pulse">Sincronizando catálogos de infraestructura...</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="w-full h-full min-h-[calc(100vh-100px)] max-w-[1600px] mx-auto flex flex-col pb-6">
+        <div className="w-full h-full min-h-[calc(100vh-100px)] max-w-[95%] xl:max-w-[1800px] mx-auto flex flex-col pb-6 animate-in fade-in duration-500">
 
             <CustomModal
                 isOpen={modalConfig.isOpen} type={modalConfig.type} title={modalConfig.title} message={modalConfig.message}
                 onConfirm={modalConfig.onConfirm} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
             />
 
-            {/* Cabecera */}
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 shrink-0">
+            {/* Cabecera Dinámica */}
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
                 <div>
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                        <CalendarCheck className="text-[#001D4A]" size={32} /> Nueva Reserva
+                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        <CalendarCheck className="text-[#001D4A]" size={36} /> Planificador de Espacios
                     </h2>
-                    <p className="text-slate-500 font-medium mt-1">Busque disponibilidad real y asigne bloques masivos.</p>
+                    <p className="text-slate-500 font-medium mt-1">Gestione la ocupación y asigne bloques masivos por rangos de tiempo.</p>
                 </div>
 
-                <div className="flex bg-slate-200/60 p-1.5 rounded-xl border border-slate-200/50 w-full sm:w-auto shadow-sm">
-                    <button onClick={() => setVista('semana')} className={`flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'semana' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>Semana</button>
-                    <button onClick={() => setVista('mes')} className={`flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'mes' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>Mes</button>
+                <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-sm">
+                    <button onClick={() => setVista('semana')} className={`flex items-center justify-center gap-2 flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'semana' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>
+                        <CalendarDays size={16}/> Semana
+                    </button>
+                    <button onClick={() => setVista('mes')} className={`flex items-center justify-center gap-2 flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'mes' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>
+                        <CalendarRange size={16}/> Mes
+                    </button>
                 </div>
             </div>
 
-            {/* Layout Principal Flex */}
-            <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[600px]">
-
-                {/* Columna Izquierda: Configuración */}
-                <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-4 h-full">
+            <div className="flex flex-col xl:flex-row gap-6 flex-1 min-h-[600px]">
+                
+                {/* Panel de Parámetros Lateral */}
+                <div className="w-full xl:w-[380px] shrink-0 flex flex-col gap-5 h-full">
                     <ReservaSidebarConfig
                         laboratorios={laboratorios}
+                        materias={materias}
                         labSeleccionado={labSeleccionado} setLabSeleccionado={setLabSeleccionado}
-                        materiaSeleccionada={materiaSeleccionada} setMateriaSeleccionada={setMateriaSeleccionada}
+                        materiaIdSeleccionada={materiaIdSeleccionada} setMateriaIdSeleccionada={setMateriaIdSeleccionada}
                         periodoModulo={periodoModulo} setPeriodoModulo={setPeriodoModulo}
                         periodoAnio={periodoAnio} setPeriodoAnio={setPeriodoAnio}
                         fechaPivote={fechaPivote} setFechaPivote={setFechaPivote}
                         cantidadSeleccionada={seleccion.length}
+                        onLimpiarSeleccion={() => setSeleccion([])}
                     />
 
                     <button
                         onClick={solicitarConfirmacion}
-                        disabled={seleccion.length === 0 || !materiaSeleccionada.trim() || isSubmitting}
-                        className="w-full bg-[#001D4A] hover:bg-[#001D4A]/90 text-white font-bold py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex justify-center items-center gap-3"
+                        disabled={seleccion.length === 0 || !materiaIdSeleccionada || isSubmitting}
+                        className="w-full bg-[#001D4A] hover:bg-[#001D4A]/90 text-white font-black py-4.5 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-[#001D4A]/20 hover:shadow-2xl hover:-translate-y-0.5 flex justify-center items-center gap-3 text-lg"
                     >
-                        {isSubmitting ? <Loader2 size={22} className="animate-spin" /> : <CalendarCheck size={22} />}
-                        {isSubmitting ? "Procesando Sistema..." : `Procesar Solicitud`}
+                        {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : <CalendarCheck size={24} />}
+                        {isSubmitting ? "Procesando Solicitud..." : `Procesar Reservas`}
                     </button>
                 </div>
 
-                {/* Columna Derecha: Grilla interactiva */}
+                {/* Grilla Interactiva */}
                 <div className="flex-1 min-w-0 bg-white rounded-3xl flex flex-col h-full shadow-sm border border-slate-200 overflow-hidden">
                     {!labSeleccionado ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-5 p-8 bg-slate-50/50">
-                            <div className="w-24 h-24 bg-white shadow-sm rounded-full flex items-center justify-center border border-slate-100">
-                                <CalendarCheck size={40} className="text-slate-300" />
+                            <div className="w-24 h-24 bg-white shadow-md rounded-full flex items-center justify-center border border-slate-100">
+                                <MapPin size={40} className="text-slate-300" />
                             </div>
                             <div className="text-center">
-                                <h3 className="text-xl font-bold text-slate-700 mb-1">Sin espacio seleccionado</h3>
-                                <p className="font-medium text-slate-500 max-w-sm">Por favor, seleccione un laboratorio en el panel izquierdo para cargar su disponibilidad.</p>
+                                <h3 className="text-2xl font-black text-slate-700 mb-2">Sin espacio seleccionado</h3>
+                                <p className="font-medium text-slate-500 max-w-sm">Por favor, seleccione un laboratorio en el panel izquierdo para cargar la matriz de disponibilidad en tiempo real.</p>
                             </div>
                         </div>
                     ) : isLoadingGrid ? (
                         <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-slate-50/50">
                             <Loader2 size={48} className="animate-spin text-[#001D4A]" />
-                            <p className="text-slate-500 font-medium animate-pulse">Sincronizando horarios...</p>
+                            <p className="text-slate-500 font-bold animate-pulse">Sincronizando matriz de horarios compartidos...</p>
                         </div>
                     ) : (
                         <ShiftGridSelector
