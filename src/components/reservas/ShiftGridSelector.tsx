@@ -26,6 +26,7 @@ interface Props {
     disponibilidad: Disponibilidad[];
     misReservas: any[];
     seleccion: CeldaSeleccionada[];
+    turnoInicial: string;
     onToggleCelda: (fecha: string, bloqueId: number) => void;
     onToggleMulti: (
         celdas: CeldaSeleccionada[],
@@ -41,8 +42,8 @@ const TURNOS = [
 ];
 
 
-export function ShiftGridSelector({ bloques, fechasVisibles, disponibilidad, misReservas, seleccion, onToggleCelda, onToggleMulti }: Props) {
-    const [activeShift, setActiveShift] = useState<string>('mañana');
+export function ShiftGridSelector({ bloques, fechasVisibles, disponibilidad, misReservas, seleccion,turnoInicial, onToggleCelda, onToggleMulti }: Props) {
+    const [activeShift, setActiveShift] = useState<string>(turnoInicial);
 
     // 1. Filtrar bloques solo para el turno activo
     const bloquesDelTurno = useMemo(() => {

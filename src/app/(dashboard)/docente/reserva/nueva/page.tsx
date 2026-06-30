@@ -28,8 +28,8 @@ interface CeldaSeleccionada {
 export default function NuevaReservaPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const turnoEditar =
-        searchParams.get("turno");
+    const turnoEditar = searchParams.get("turno");
+
     // Parámetros de Edición
     const isEditMode = searchParams.get('edit') === 'true';
     const editGrupoId = searchParams.get('grupoId');
@@ -51,6 +51,8 @@ export default function NuevaReservaPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(true);
     const dataLoaded = useRef(false); // Ref para evitar recargas infinitas en modo edición
+    const [turnoInicial, setTurnoInicial] = useState("mañana");
+
 
     // Configuración del Modal
     const [modalConfig, setModalConfig] = useState<{
@@ -81,6 +83,16 @@ export default function NuevaReservaPage() {
             .catch(console.error)
             .finally(() => setIsLoadingCatalogs(false));
     }, []);
+
+    useEffect(() => {
+
+        if (turnoEditar) {
+
+            setTurnoInicial(turnoEditar);
+
+        }
+
+    }, [turnoEditar]);
 
     // =========================================================================
     // 2. MODO EDICIÓN: AUTO-LLENADO INICIAL
@@ -326,6 +338,7 @@ export default function NuevaReservaPage() {
                                 disponibilidad={disponibilidad}
                                 misReservas={misReservas}
                                 seleccion={seleccion}
+                                turnoInicial={turnoInicial}
                                 onToggleCelda={handleToggleCelda}
                                 onToggleMulti={handleToggleMulti}
                             />
