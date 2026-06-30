@@ -8,8 +8,10 @@ import { FilterBar } from "@/components/reservas/FilterBar";
 import { CustomModal } from "@/components/ui/CustomModal";
 import {
     FlaskConical, Loader2, Plus, Trash2, CalendarDays,
-    ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock, AlertCircle, CalendarRange
+    ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock, AlertCircle, CalendarRange, Edit2
 } from "lucide-react";
+
+
 import Link from "next/link";
 
 export default function MisReservasPage() {
@@ -228,15 +230,48 @@ export default function MisReservasPage() {
                                             </td>
                                             <td className="px-6 py-5 text-center"><StatusBadge estado={grupo.estado} /></td>
                                             <td className="px-6 py-5 text-right">
-                                                {(grupo.estado !== 'cancelada' && grupo.estado !== 'rechazada') && (
-                                                    <button
-                                                        onClick={() => setModalAction({ isOpen: true, grupoId: grupo.id, motivo: '' })}
-                                                        className="p-2.5 bg-white border border-slate-200 hover:bg-red-50 hover:border-red-200 text-slate-400 hover:text-red-600 rounded-xl transition-all shadow-sm"
-                                                        title="Cancelar Solicitud"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                )}
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {/* Usamos Optional Chaining (?.) para evitar crasheos si el array está vacío */}
+                                                    {(() => {
+                                                        const reservaBase = grupo.reservasCrudas?.[0];
+                                                        if (!reservaBase) return null;
+
+                                                        return (
+                                                            <>
+                                                                {/* BOTÓN EDITAR */}
+                                                                {grupo.estado === 'pendiente' && (
+                                                                    <Link
+                                                                        href={{
+                                                                            pathname: '/docente/reserva/nueva',
+                                                                            query: {
+                                                                                edit: 'true',
+                                                                                grupoId: grupo.id,
+                                                                                lab: reservaBase.laboratorio_id,
+                                                                                materiaId: reservaBase.materias?.id || reservaBase.materia_id,
+                                                                                fecha: reservaBase.fecha
+                                                                            }
+                                                                        }}
+                                                                        className="p-2.5 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm"
+                                                                        title="Editar Solicitud"
+                                                                    >
+                                                                        <Edit2 size={18} />
+                                                                    </Link>
+                                                                )}
+
+                                                                {/* BOTÓN CANCELAR */}
+                                                                {(grupo.estado !== 'cancelada' && grupo.estado !== 'rechazada') && (
+                                                                    <button
+                                                                        onClick={() => setModalAction({ isOpen: true, grupoId: grupo.id, motivo: '' })}
+                                                                        className="p-2.5 bg-white border border-slate-200 hover:bg-red-50 hover:border-red-200 text-slate-400 hover:text-red-600 rounded-xl transition-all shadow-sm"
+                                                                        title="Cancelar Solicitud"
+                                                                    >
+                                                                        <Trash2 size={18} />
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
                                             </td>
                                         </tr>
                                         {/* ACORDEÓN MEJORADO (Sin horas, solo etiquetas de turno) */}

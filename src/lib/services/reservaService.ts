@@ -139,10 +139,9 @@ export const getMisReservas = async (
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // SOLUCIÓN: Strings de selección limpios de comentarios para evitar el error de PostgREST
     const stringQuery = filters?.materia_actividad
-        ? "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias!inner(id, nombre)"
-        : "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias(id, nombre)";
+        ? "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorio_id, materia_id, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias!inner(id, nombre)"
+        : "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorio_id, materia_id, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias(id, nombre)";
 
     let query = supabase
         .from('reservas')
@@ -171,6 +170,48 @@ export const getMisReservas = async (
     if (error) throw new Error(error.message);
     return { data, count };
 };
+
+export const getMisReservasRango = async (
+    laboratorioId: string,
+    inicio: string,
+    fin: string
+) => {
+
+
+    const supabase = createClient();
+
+
+    const { data, error } = await supabase
+        .from("reservas")
+        .select(`
+    id,
+    fecha,
+    bloque_horario_id,
+    estado,
+    laboratorio_id
+`)
+        .eq(
+            "laboratorio_id",
+            laboratorioId
+        )
+        .gte(
+            "fecha",
+            inicio
+        )
+        .lte(
+            "fecha",
+            fin
+        );
+
+
+    if (error)
+        throw new Error(error.message);
+
+
+    return data;
+
+
+}
 
 export const cancelarReserva = async (reservaId: string, motivo: string) => {
     const supabase = createClient();
@@ -226,4 +267,113 @@ export const actualizarReserva = async (reservaId: string, nuevosDatos: {
 
     if (error) throw new Error(error.message);
     return data;
+};
+
+// =========================================================================
+// 5. MODO EDICIÓN (REEMPLAZO ATÓMICO Y MODIFICACIONES)
+// =========================================================================
+
+// Recupera los bloques exactos que el docente seleccionó en el pasado
+export const getReservasPorGrupo = async (grupoId: string) => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('reservas')
+        .select('id, fecha, bloque_horario_id, materia_id, laboratorio_id, periodo_modulo, periodo_anio')
+        .eq('grupo_solicitud_id', grupoId);
+
+    if (error) throw new Error(error.message);
+    return data;
+};
+
+// Reemplazo Atómico con Pre-Validación en Memoria (Para grupos pendientes)
+export const actualizarGrupoPendiente = async (
+    grupoId: string,
+    solicitudMasiva: {
+        laboratorio_id: string;
+        materia_id: string;
+        periodo_modulo: number;
+        periodo_anio: number;
+        selecciones: { fecha: string; bloqueId: number }[];
+    }
+) => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+
+    if (!solicitudMasiva.selecciones || solicitudMasiva.selecciones.length === 0) {
+        throw new Error("Debe seleccionar al menos un bloque.");
+    }
+
+    // 1. PRE-VALIDACIÓN (A prueba de balas)
+    const fechasUnicas = Array.from(new Set(solicitudMasiva.selecciones.map(s => s.fecha)));
+    fechasUnicas.sort();
+    const fechaInicio = fechasUnicas[0];
+    const fechaFin = fechasUnicas[fechasUnicas.length - 1];
+
+    const { data: ocupados } = await supabase
+        .from('reservas')
+        .select('fecha, bloque_horario_id, grupo_solicitud_id')
+        .eq('laboratorio_id', solicitudMasiva.laboratorio_id)
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin)
+        .in('estado', ['pendiente', 'aprobada', 'pendiente_modificacion']);
+
+    // Uso de String() para garantizar igualdad estricta
+    const colisionesReales = solicitudMasiva.selecciones.filter(seleccion => {
+        return ocupados?.some(ocupado =>
+            ocupado.fecha === seleccion.fecha &&
+            String(ocupado.bloque_horario_id) === String(seleccion.bloqueId) &&
+            String(ocupado.grupo_solicitud_id).toLowerCase() !== String(grupoId).toLowerCase()
+        );
+    });
+
+    if (colisionesReales.length > 0) {
+        throw new Error(`Los siguientes horarios ya no están disponibles: ${colisionesReales.map(c => `${c.fecha} (Bloque ${c.bloqueId})`).join(', ')}`);
+    }
+
+    // 2. LIMPIEZA SEGURA (Ahora permitida por la nueva política SQL)
+    const { error: deleteError } = await supabase
+        .from('reservas')
+        .delete()
+        .eq('grupo_solicitud_id', grupoId)
+        .eq('estado', 'pendiente');
+
+    if (deleteError) throw new Error("Error de permisos al limpiar configuración previa: " + deleteError.message);
+
+    // 3. RE-INSERCIÓN AGRUPADA
+    const agrupadoPorFecha = solicitudMasiva.selecciones.reduce((acc, curr) => {
+        if (!acc[curr.fecha]) acc[curr.fecha] = [];
+        acc[curr.fecha].push(curr.bloqueId);
+        return acc;
+    }, {} as Record<string, number[]>);
+
+    const promesas = Object.entries(agrupadoPorFecha).map(async ([fecha, bloquesIds]) => {
+        const { data, error } = await supabase.rpc('solicitar_reserva', {
+            p_laboratorio_id: solicitudMasiva.laboratorio_id,
+            p_fecha: fecha,
+            p_bloques_horario_ids: bloquesIds,
+            p_periodo_modulo: solicitudMasiva.periodo_modulo,
+            p_periodo_anio: solicitudMasiva.periodo_anio,
+            p_materia_id: solicitudMasiva.materia_id,
+            p_grupo_id: grupoId
+        });
+
+        if (error) throw new Error(`Error en fecha ${fecha}: ${error.message}`);
+        return { fecha, data };
+    });
+
+    return await Promise.all(promesas);
+};
+
+// Función para modificar UNA reserva aprobada
+export const solicitarModificacionAprobada = async (reservaId: string, nuevaFecha: string, nuevoBloqueId: number) => {
+    const supabase = createClient();
+    const { error } = await supabase.rpc('solicitar_modificacion_reserva', {
+        p_reserva_id: reservaId,
+        p_nueva_fecha: nuevaFecha,
+        p_nuevo_bloque_horario_id: nuevoBloqueId
+    });
+
+    if (error) throw new Error(error.message);
+    return true;
 };

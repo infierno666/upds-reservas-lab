@@ -4,7 +4,6 @@ import React from "react";
 import { MapPin, BookOpen, Clock, Trash2 } from "lucide-react";
 
 import { formatearFecha } from "@/lib/utils/dateUtils";
-import { LaboratoryCards } from "./LaboratoryCards";
 import { ReservationCalendar } from "./ReservationCalendar";
 interface Props {
     laboratorios: any[];
@@ -53,33 +52,6 @@ export function ReservaSidebarConfig({
 
             <div className="space-y-6 flex-1 z-10">
 
-                <div className="space-y-3">
-
-                    <label className="
-text-xs
-font-bold
-text-slate-500
-uppercase
-tracking-wider
-">
-
-                        Espacio físico
-
-                    </label>
-
-
-                    <LaboratoryCards
-
-                        laboratorios={laboratorios}
-
-                        laboratorioSeleccionado={labSeleccionado}
-
-                        setLaboratorioSeleccionado={setLabSeleccionado}
-
-                    />
-
-
-                </div>
                 {/* 2. Materia / Actividad */}
                 <div className="space-y-2.5">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
