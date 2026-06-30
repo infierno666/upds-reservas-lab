@@ -29,6 +29,7 @@ export default function NuevaReservaPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const turnoEditar = searchParams.get("turno");
+    const vistaEditar = searchParams.get("vista");
 
     // Parámetros de Edición
     const isEditMode = searchParams.get('edit') === 'true';
@@ -94,6 +95,19 @@ export default function NuevaReservaPage() {
 
     }, [turnoEditar]);
 
+    useEffect(() => {
+
+
+        if (vistaEditar) {
+
+            setVista(
+                vistaEditar as "semana" | "mes"
+            );
+
+        }
+
+
+    }, [vistaEditar]);
     // =========================================================================
     // 2. MODO EDICIÓN: AUTO-LLENADO INICIAL
     // =========================================================================

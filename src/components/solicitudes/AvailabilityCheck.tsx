@@ -1,26 +1,51 @@
-import { Info } from "lucide-react";
+"use client";
+
+import { Info, AlertTriangle, CheckCircle } from "lucide-react";
+import { ReservaIndividual } from "@/lib/services/admin.service";
 
 interface Props {
-    isAvailable: boolean;
-    nombreLaboratorio?: string;
+    reservas: ReservaIndividual[];
+    nombreLaboratorio: string;
+    // En un caso real, esto vendría validado desde el backend.
+    // Aquí simularemos que podemos recibir un array de IDs conflictivos.
+    conflictosIds?: string[];
 }
 
-export function AvailabilityCheck({ isAvailable, nombreLaboratorio = "laboratorio solicitado" }: Props) {
+export function AvailabilityCheck({ reservas, nombreLaboratorio, conflictosIds = [] }: Props) {
+    const total = reservas.length;
+    const conConflicto = conflictosIds.length;
+    const isTotalmenteLibre = conConflicto === 0;
+
     return (
-        <div className={`p-4 rounded-xl border flex gap-3 items-start ${isAvailable ? 'bg-[#EEF2FF] border-[#E0E7FF]' : 'bg-red-50 border-red-200'
+        <div className={`p-5 rounded-xl border flex gap-4 items-start transition-colors ${isTotalmenteLibre
+                ? 'bg-emerald-50/50 border-emerald-200'
+                : 'bg-amber-50/50 border-amber-200'
             }`}>
-            <Info size={20} className={`mt-0.5 shrink-0 ${isAvailable ? 'text-[#4F46E5]' : 'text-red-600'}`} />
-            <div>
-                <h4 className="font-semibold text-sm text-slate-800 mb-1">
+            {isTotalmenteLibre ? (
+                <CheckCircle size={24} className="mt-0.5 shrink-0 text-emerald-600" />
+            ) : (
+                <AlertTriangle size={24} className="mt-0.5 shrink-0 text-amber-500" />
+            )}
+
+            <div className="flex-1">
+                <h4 className={`font-bold text-base mb-1 ${isTotalmenteLibre ? 'text-emerald-800' : 'text-amber-800'}`}>
                     Análisis de Disponibilidad
                 </h4>
-                <p className="text-[13px] text-slate-600 leading-relaxed">
-                    {isAvailable ? (
-                        <>El <strong>{nombreLaboratorio}</strong> se encuentra <strong>disponible</strong> en el horario solicitado. No hay conflictos con otras materias o mantenimientos programados.</>
-                    ) : (
-                        <>¡Alerta! El <strong>{nombreLaboratorio}</strong> presenta un conflicto de horarios con otra reserva aprobada o un bloqueo de mantenimiento.</>
-                    )}
-                </p>
+
+                {isTotalmenteLibre ? (
+                    <p className="text-sm text-emerald-700/80 leading-relaxed font-medium">
+                        Los <strong>{total} bloques</strong> solicitados para el <strong>{nombreLaboratorio}</strong> se encuentran totalmente libres. No hay cruces de horarios ni mantenimientos programados.
+                    </p>
+                ) : (
+                    <div className="space-y-2">
+                        <p className="text-sm text-amber-800/80 leading-relaxed font-medium">
+                            ¡Atención! Se detectaron conflictos en <strong>{conConflicto} de los {total} bloques</strong> solicitados para el {nombreLaboratorio}.
+                        </p>
+                        <p className="text-xs text-amber-700 font-semibold bg-amber-100/50 inline-block px-2 py-1 rounded-md border border-amber-200">
+                            Recomendación: Usa la "Aprobación Parcial" para descartar los días ocupados.
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );

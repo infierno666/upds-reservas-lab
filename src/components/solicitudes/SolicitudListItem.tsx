@@ -1,22 +1,13 @@
-import { Solicitud } from "@/lib/services/admin.service";
-import { Calendar } from "lucide-react";
+import { SolicitudGrupo } from "@/lib/services/admin.service";
+import { CalendarDays, FlaskConical, User, Clock } from "lucide-react";
 
 interface Props {
-    data: Solicitud;
+    data: SolicitudGrupo;
     isActive: boolean;
     onClick: () => void;
 }
 
 export function SolicitudListItem({ data, isActive, onClick }: Props) {
-    // Extracción segura a prueba de fallos (Objeto vs Arreglo)
-    const getSafeValue = (field: any) => Array.isArray(field) ? field[0] : field;
-
-    const perfil = getSafeValue(data.perfiles);
-    const lab = getSafeValue(data.laboratorios);
-
-    const docenteNombre = perfil?.nombre_completo ?? "Docente desconocido";
-    const labNombre = lab?.nombre ?? "Sin laboratorio";
-
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
         const diffMins = Math.floor((new Date().getTime() - date.getTime()) / 60000);
@@ -29,36 +20,49 @@ export function SolicitudListItem({ data, isActive, onClick }: Props) {
         return date.toLocaleDateString();
     };
 
+    // Calculamos los días únicos de este paquete
+    const diasUnicos = new Set(data.reservas.map(r => r.fecha)).size;
+
     return (
         <div
             onClick={onClick}
-            className={`p-4 border-b cursor-pointer transition-colors ${isActive ? 'bg-blue-50 border-l-4 border-l-blue-900' : 'bg-white hover:bg-slate-50 border-l-4 border-l-transparent'
+            className={`p-4 border-b cursor-pointer transition-all duration-200 ${isActive
+                    ? 'bg-[#004B87]/5 border-l-4 border-l-[#004B87] shadow-sm'
+                    : 'bg-white hover:bg-slate-50 border-l-4 border-l-transparent'
                 }`}
         >
-            <div className="flex justify-between items-start mb-1">
-                <div className="flex items-center gap-2">
-                    {!isActive && <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></div>}
-                    <p className={`text-sm truncate ${isActive ? 'font-bold text-slate-900' : 'font-semibold text-slate-800'}`}>
-                        {docenteNombre}
-                    </p>
-                </div>
-                <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap ml-2">
-                    {formatTimeAgo(data.created_at)}
+            {/* Header de la tarjeta */}
+            <div className="flex justify-between items-start mb-2.5">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    REQ-{data.grupo_id.slice(0, 5)}
+                </span>
+                <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    <Clock size={10} /> {formatTimeAgo(data.fecha_creacion)}
                 </span>
             </div>
 
-            <div className="flex items-center gap-2 ml-4 mb-2.5 text-[13px] text-slate-500">
-                <span className="font-medium truncate">{labNombre}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1"><Calendar size={12} /> {data.fecha}</span>
-            </div>
-
-            <div className="ml-4 flex flex-wrap gap-2">
-                <span className="text-[11px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded font-medium truncate max-w-[140px]">
+            {/* Contenido Principal */}
+            <div className="mb-3">
+                <p className={`text-sm truncate ${isActive ? 'font-black text-[#004B87]' : 'font-bold text-slate-800'}`}>
                     {data.materia_actividad}
+                </p>
+                <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5 mt-1 truncate">
+                    <User size={13} className="opacity-70" /> {data.docente_nombre}
+                </p>
+            </div>
+
+            {/* Footer de la tarjeta con pastillas de información */}
+            <div className="flex justify-between items-center mt-2">
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded-md border border-slate-200/60">
+                    <FlaskConical size={13} className="text-[#004B87]" />
+                    <span className="truncate max-w-[120px]">{data.laboratorio_nombre}</span>
                 </span>
-                <span className="text-[11px] bg-[#FFF8E1] text-yellow-700 px-2 py-0.5 rounded font-medium capitalize">
-                    {data.estado}
+
+                {/* Indicador visual de volumen (Se pone naranja si pide mucho) */}
+                <span className={`text-[10px] flex items-center gap-1.5 px-2 py-1 rounded-md font-bold border ${diasUnicos > 5 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+                    }`}>
+                    <CalendarDays size={12} className={diasUnicos > 5 ? 'text-amber-500' : 'text-slate-400'} />
+                    {diasUnicos} Días | {data.total_bloques} blq
                 </span>
             </div>
         </div>

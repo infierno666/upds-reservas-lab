@@ -27,6 +27,7 @@ interface Props {
     misReservas: any[];
     seleccion: CeldaSeleccionada[];
     turnoInicial: string;
+    
     onToggleCelda: (fecha: string, bloqueId: number) => void;
     onToggleMulti: (
         celdas: CeldaSeleccionada[],

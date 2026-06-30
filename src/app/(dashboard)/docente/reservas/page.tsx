@@ -106,7 +106,6 @@ export default function MisReservasPage() {
     const hasNextPage = page * PAGE_SIZE < totalRecords;
 
     const handleConfirmCancel = async () => {
-        // MEJORA: Reemplazo de alert() nativo por Toast
         if (!modalAction.grupoId || !modalAction.motivo.trim()) {
             showToast('error', 'Por favor, escriba una justificación válida para la cancelación.');
             return;
@@ -118,11 +117,9 @@ export default function MisReservasPage() {
             setModalAction({ isOpen: false, grupoId: null, motivo: '' });
             setExpandedGroup(null);
 
-            // MEJORA: Feedback de éxito
             showToast('success', 'La solicitud de reserva ha sido cancelada exitosamente.');
 
         } catch (err: any) {
-            // MEJORA: Reemplazo de alert() nativo por Toast
             showToast('error', err.message || 'Ocurrió un problema al intentar cancelar la solicitud.');
         }
     };
@@ -146,7 +143,7 @@ export default function MisReservasPage() {
                 onClose={() => setModalAction({ ...modalAction, isOpen: false, motivo: '' })}
                 onConfirm={handleConfirmCancel}
 
-                // -- NUEVAS PROPS MÁGICAS --
+            
                 isDestructive={true}
                 confirmText="Sí, Cancelar Reserva"
                 cancelText="Volver atrás"
@@ -266,7 +263,8 @@ export default function MisReservasPage() {
                                                                                 lab: reservaBase.laboratorio_id,
                                                                                 materiaId: reservaBase.materias?.id || reservaBase.materia_id,
                                                                                 fecha: reservaBase.fecha,
-                                                                                turno: reservaBase.bloques_horarios?.turno
+                                                                                turno: reservaBase.bloques_horarios?.turno,
+                                                                                vista:'semana'
                                                                             }
                                                                         }}
                                                                         className="p-2.5 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm"
