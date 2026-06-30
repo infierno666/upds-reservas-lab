@@ -6,12 +6,11 @@ import { getMisReservas, cancelarGrupoReservas } from "@/lib/services/reservaSer
 import { StatusBadge } from "@/components/ui/status-badge";
 import { FilterBar } from "@/components/reservas/FilterBar";
 import { CustomModal } from "@/components/ui/CustomModal";
+import { Toast, ToastType } from "@/components/ui/toast";
 import {
     FlaskConical, Loader2, Plus, Trash2, CalendarDays,
     ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock, AlertCircle, CalendarRange, Edit2
 } from "lucide-react";
-
-
 import Link from "next/link";
 
 export default function MisReservasPage() {
@@ -23,12 +22,21 @@ export default function MisReservasPage() {
     const PAGE_SIZE = 500;
     const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
-    // Modal
+    // Estado del Modal de Confirmación
     const [modalAction, setModalAction] = useState<{
         isOpen: boolean;
         grupoId: string | null;
         motivo: string;
     }>({ isOpen: false, grupoId: null, motivo: '' });
+
+    // NUEVO: Estado para Notificaciones Flotantes (Toast)
+    const [toast, setToast] = useState<{ show: boolean; type: ToastType; message: string }>({
+        show: false, type: 'success', message: ''
+    });
+
+    const showToast = (type: ToastType, message: string) => {
+        setToast({ show: true, type, message });
+    };
 
     // Consulta de datos
     const { data, isLoading, isError, error } = useQuery({
@@ -36,13 +44,9 @@ export default function MisReservasPage() {
         queryFn: () => getMisReservas(page, PAGE_SIZE, filters),
     });
 
-    // =========================================================================
-    // ALGORITMO DE AGRUPACIÓN INTELIGENTE (FASE 4)
-    // =========================================================================
     const gruposAgrupados = useMemo(() => {
         if (!data?.data) return [];
 
-        // 1. Agrupamos primero por grupo_solicitud_id
         const map = data.data.reduce((acc: any, r: any) => {
             if (!acc[r.grupo_solicitud_id]) {
                 const fechaSolicitud = r.created_at
@@ -51,12 +55,12 @@ export default function MisReservasPage() {
 
                 acc[r.grupo_solicitud_id] = {
                     id: r.grupo_solicitud_id,
-                    materia: r.materias?.nombre || r.materia_actividad || 'Sin asignar', // Compatible con Fase 2 y DB anterior
+                    materia: r.materias?.nombre || r.materia_actividad || 'Sin asignar',
                     laboratorio: r.laboratorios?.nombre || 'Lab. Desconocido',
                     estado: r.estado,
                     fechaSolicitud,
                     totalBloques: 0,
-                    reservasCrudas: [] // Guardamos los datos crudos temporalmente
+                    reservasCrudas: []
                 };
             }
             acc[r.grupo_solicitud_id].reservasCrudas.push(r);
@@ -64,10 +68,7 @@ export default function MisReservasPage() {
             return acc;
         }, {});
 
-        // 2. Ahora, para cada grupo, analizamos las fechas y los turnos
         const gruposArray = Object.values(map).map((grupo: any) => {
-
-            // Agrupamos las reservas de este grupo por "fecha"
             const porFecha = grupo.reservasCrudas.reduce((fAcc: any, res: any) => {
                 const fecha = res.fecha;
                 const turno = res.bloques_horarios?.turno || 'Desconocido';
@@ -76,32 +77,25 @@ export default function MisReservasPage() {
                 if (!fAcc[fecha]) fAcc[fecha] = {};
                 if (!fAcc[fecha][turno]) fAcc[fecha][turno] = [];
 
-                fAcc[fecha][turno].push(periodo); // Guardamos qué periodos tiene este turno
+                fAcc[fecha][turno].push(periodo);
                 return fAcc;
             }, {});
 
-            // Generamos las etiquetas inteligentes ("Turno Mañana (Completo)", etc.)
             const diasProcesados = Object.entries(porFecha).map(([fecha, turnosObj]) => {
-                // Forzamos el tipado de entries a un registro de arreglos numéricos o any para complacer a TS
                 const entriesValidas = Object.entries(turnosObj as Record<string, any[]>);
-
                 const etiquetasTurnos = entriesValidas.map(([turno, periodos]) => {
-                    // LÓGICA DE NEGOCIO: Si tiene 2 periodos es completo, si no, es medio.
                     const tipo = periodos.length === 2 ? 'Completo' : 'Medio';
-                    // Capitalizamos la primera letra del turno
                     const turnoCapitalized = turno.charAt(0).toUpperCase() + turno.slice(1);
                     return `Turno ${turnoCapitalized} (${tipo})`;
                 });
-
                 return { fecha, etiquetas: etiquetasTurnos };
             });
 
-            // Ordenamos los días cronológicamente
             diasProcesados.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
 
             return {
                 ...grupo,
-                diasAgrupados: diasProcesados, // Le inyectamos el resultado limpio
+                diasAgrupados: diasProcesados,
             };
         });
 
@@ -112,8 +106,9 @@ export default function MisReservasPage() {
     const hasNextPage = page * PAGE_SIZE < totalRecords;
 
     const handleConfirmCancel = async () => {
+        // MEJORA: Reemplazo de alert() nativo por Toast
         if (!modalAction.grupoId || !modalAction.motivo.trim()) {
-            alert("Por favor, justifique la cancelación.");
+            showToast('error', 'Por favor, escriba una justificación válida para la cancelación.');
             return;
         }
 
@@ -122,24 +117,42 @@ export default function MisReservasPage() {
             queryClient.invalidateQueries({ queryKey: ['misReservas'] });
             setModalAction({ isOpen: false, grupoId: null, motivo: '' });
             setExpandedGroup(null);
+
+            // MEJORA: Feedback de éxito
+            showToast('success', 'La solicitud de reserva ha sido cancelada exitosamente.');
+
         } catch (err: any) {
-            alert("Error al cancelar la solicitud: " + err.message);
+            // MEJORA: Reemplazo de alert() nativo por Toast
+            showToast('error', err.message || 'Ocurrió un problema al intentar cancelar la solicitud.');
         }
     };
 
     return (
         <div className="p-4 md:p-8 w-full max-w-[95%] xl:max-w-[1800px] mx-auto flex flex-col h-full space-y-6 animate-in fade-in duration-500">
 
+            {/* NUEVO COMPONENTE DE NOTIFICACIONES */}
+            <Toast
+                show={toast.show}
+                type={toast.type}
+                message={toast.message}
+                onClose={() => setToast({ ...toast, show: false })}
+            />
+
             <CustomModal
                 isOpen={modalAction.isOpen}
                 type="confirm"
                 title="Cancelar Solicitud Definitivamente"
                 message="Esta acción cancelará TODAS las fechas y turnos programados en este grupo. Por favor, indique el motivo:"
-                onClose={() => setModalAction({ ...modalAction, isOpen: false })}
+                onClose={() => setModalAction({ ...modalAction, isOpen: false, motivo: '' })}
                 onConfirm={handleConfirmCancel}
+
+                // -- NUEVAS PROPS MÁGICAS --
+                isDestructive={true}
+                confirmText="Sí, Cancelar Reserva"
+                cancelText="Volver atrás"
             >
                 <textarea
-                    className="w-full mt-3 p-4 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500/30 transition-all text-slate-700 resize-none"
+                    className="w-full mt-2 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500/30 transition-all text-slate-700 resize-none text-sm font-medium"
                     rows={3}
                     placeholder="Ej. Cambio de planificación académica..."
                     value={modalAction.motivo}
@@ -231,10 +244,14 @@ export default function MisReservasPage() {
                                             <td className="px-6 py-5 text-center"><StatusBadge estado={grupo.estado} /></td>
                                             <td className="px-6 py-5 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {/* Usamos Optional Chaining (?.) para evitar crasheos si el array está vacío */}
                                                     {(() => {
                                                         const reservaBase = grupo.reservasCrudas?.[0];
+
                                                         if (!reservaBase) return null;
+
+
+                                                        const turnoBase =
+                                                            reservaBase.bloques_horarios?.turno || "mañana";
 
                                                         return (
                                                             <>
@@ -248,7 +265,8 @@ export default function MisReservasPage() {
                                                                                 grupoId: grupo.id,
                                                                                 lab: reservaBase.laboratorio_id,
                                                                                 materiaId: reservaBase.materias?.id || reservaBase.materia_id,
-                                                                                fecha: reservaBase.fecha
+                                                                                fecha: reservaBase.fecha,
+                                                                                turno: reservaBase.bloques_horarios?.turno
                                                                             }
                                                                         }}
                                                                         className="p-2.5 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm"
@@ -274,7 +292,7 @@ export default function MisReservasPage() {
                                                 </div>
                                             </td>
                                         </tr>
-                                        {/* ACORDEÓN MEJORADO (Sin horas, solo etiquetas de turno) */}
+                                        {/* ACORDEÓN */}
                                         {expandedGroup === grupo.id && (
                                             <tr className="bg-slate-50/50 border-b-0 animate-in slide-in-from-top-2">
                                                 <td colSpan={7} className="px-6 py-6">

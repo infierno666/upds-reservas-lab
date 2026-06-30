@@ -10,7 +10,7 @@ import {
     crearReservaMasiva,
     getReservasPorGrupo,
     actualizarGrupoPendiente,
-    getMisReservasRango 
+    getMisReservasRango
 } from "@/lib/services/reservaService";
 import { calcularFechasVisibles, formatearFecha } from "@/lib/utils/dateUtils";
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -28,7 +28,8 @@ interface CeldaSeleccionada {
 export default function NuevaReservaPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
-
+    const turnoEditar =
+        searchParams.get("turno");
     // Parámetros de Edición
     const isEditMode = searchParams.get('edit') === 'true';
     const editGrupoId = searchParams.get('grupoId');
@@ -130,7 +131,11 @@ export default function NuevaReservaPage() {
                     setMisReservas(propias.filter((p: any) => !bloquesOriginales.some(o => o.fecha === p.fecha && o.bloqueId === p.bloque_horario_id)));
                 } else {
                     setDisponibilidad(dispo);
+                    console.log("DISPONIBILIDAD:", dispo);
+
+                    console.log("MIS RESERVAS:", propias);
                     setMisReservas(propias);
+
                 }
             } catch (error) {
                 console.error(error);

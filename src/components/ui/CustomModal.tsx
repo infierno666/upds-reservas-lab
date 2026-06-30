@@ -1,63 +1,101 @@
-import { CheckCircle2, AlertTriangle, X, Info } from "lucide-react";
-import React from "react"; // Importante para React.ReactNode
+import React from "react";
+import { CheckCircle2, AlertTriangle, X, Info, HelpCircle } from "lucide-react";
 
 interface ModalProps {
   isOpen: boolean;
-  type: 'success' | 'error' | 'confirm' | 'form';
+  type: 'success' | 'error' | 'confirm' | 'form' | 'info';
   title: string;
-  message: string;
+  message?: string;
   onClose: () => void;
   onConfirm?: () => void;
-  children?: React.ReactNode; // <-- AQUÍ ESTÁ LA CORRECCIÓN
+  children?: React.ReactNode;
+
+  // Props opcionales para personalizar botones
+  confirmText?: string;
+  cancelText?: string;
+  isDestructive?: boolean; // Pinta el botón de confirmar en rojo
 }
 
-export function CustomModal({ isOpen, type, title, message, onClose, onConfirm, children }: ModalProps) {
+export function CustomModal({
+  isOpen, type, title, message, onClose, onConfirm, children,
+  confirmText = "Confirmar", cancelText = "Cancelar", isDestructive = false
+}: ModalProps) {
+
   if (!isOpen) return null;
 
-  const Icono = type === 'success' ? CheckCircle2 : type === 'error' ? AlertTriangle : Info;
-  const colorClass = type === 'success' ? 'text-green-600 bg-green-100' : type === 'error' ? 'text-red-600 bg-red-100' : 'text-blue-600 bg-blue-100';
+  // Configuración visual según el tipo de modal
+  const getIconInfo = () => {
+    switch (type) {
+      case 'success': return { icon: CheckCircle2, bg: 'bg-emerald-100', text: 'text-emerald-600' };
+      case 'error': return { icon: AlertTriangle, bg: 'bg-red-100', text: 'text-red-600' };
+      case 'confirm': return { icon: HelpCircle, bg: 'bg-amber-100', text: 'text-amber-600' };
+      case 'info':
+      default: return { icon: Info, bg: 'bg-blue-100', text: 'text-blue-600' };
+    }
+  };
+
+  const { icon: Icon, bg, text } = getIconInfo();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              {type !== 'form' && (
-                <div className={`p-3 rounded-full ${colorClass}`}>
-                  <Icono size={28} />
-                </div>
-              )}
-              <h3 className="text-xl font-bold text-slate-800">{title}</h3>
-            </div>
-            {/* En type="form" el cierre es solo con la X, el formulario maneja su propio submit */}
-            {type === 'form' && (
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-                <X size={20} />
-              </button>
-            )}
-          </div>
-          {message && <p className="text-slate-600 leading-relaxed mb-4">{message}</p>}
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 border border-slate-100 relative">
 
-          {/* Renderizamos los hijos si existen (formulario o textarea segun el caso) */}
-          {children && <div className="mt-2">{children}</div>}
+        {/* Botón Cerrar (X) Universal */}
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors z-10"
+          title="Cerrar"
+        >
+          <X size={20} />
+        </button>
+
+        {/* Cuerpo del Modal */}
+        <div className="p-8">
+          <div className="flex items-start gap-5 mb-2">
+            {type !== 'form' && (
+              <div className={`shrink-0 p-3.5 rounded-2xl ${bg} ${text} shadow-inner`}>
+                <Icon size={28} strokeWidth={2.5} />
+              </div>
+            )}
+            <div className="flex-1 pt-1.5">
+              <h3 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-2.5">
+                {title}
+              </h3>
+              {message && (
+                <p className="text-sm text-slate-500 font-medium leading-relaxed pr-6">
+                  {message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Renderizamos los hijos (Formularios, Textareas, etc.) */}
+          {children && (
+            <div className="mt-6">
+              {children}
+            </div>
+          )}
         </div>
 
-        {/* El footer con botones Cerrar/Confirmar NO se muestra en type="form": el formulario ya trae los suyos */}
+        {/* Footer con Acciones (Oculto en type form) */}
         {type !== 'form' && (
-          <div className="bg-slate-50 p-4 flex justify-end gap-3 border-t border-slate-100">
+          <div className="bg-slate-50/80 px-8 py-5 flex items-center justify-end gap-3 border-t border-slate-100">
             <button
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-all"
             >
-              {type === 'confirm' ? 'Cancelar' : 'Cerrar'}
+              {type === 'confirm' ? cancelText : 'Cerrar'}
             </button>
+
             {type === 'confirm' && onConfirm && (
               <button
                 onClick={() => { onConfirm(); onClose(); }}
-                className="px-5 py-2.5 rounded-xl font-bold text-white bg-[#001D4A] hover:bg-[#001D4A]/90 transition-colors shadow-md hover:shadow-lg"
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-2 ${isDestructive
+                    ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
+                    : 'bg-[#001D4A] hover:bg-[#001D4A]/90 shadow-[#001D4A]/20'
+                  }`}
               >
-                Confirmar
+                {confirmText}
               </button>
             )}
           </div>

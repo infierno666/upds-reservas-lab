@@ -67,10 +67,13 @@ export function ShiftGridSelector({ bloques, fechasVisibles, disponibilidad, mis
                 const esMiReserva = misReservas.some(
                     r =>
                         r.fecha === fechaStr &&
-                        r.bloque_horario_id === bloque.id
+                        r.bloque_horario_id === bloque.id &&
+                        (
+                            r.estado === "pendiente" ||
+                            r.estado === "aprobada" ||
+                            r.estado === "pendiente_modificacion"
+                        )
                 );
-
-
 
                 if (!ocupado && !esMiReserva) {
 
@@ -141,12 +144,49 @@ export function ShiftGridSelector({ bloques, fechasVisibles, disponibilidad, mis
             misReservas.find(
                 r =>
                     r.fecha === fechaStr &&
-                    r.bloque_horario_id === bloqueId
+                    r.bloque_horario_id === bloqueId &&
+                    (
+                        r.estado === "pendiente" ||
+                        r.estado === "aprobada" ||
+                        r.estado === "pendiente_modificacion"
+                    )
             );
 
 
 
-        if (miReserva)
+        if (miReserva) {
+
+
+            if (miReserva.estado === "aprobada") {
+
+                return {
+
+                    label: "Mi reserva",
+
+                    clase:
+                        "bg-emerald-100 border-emerald-300 text-emerald-700"
+
+                };
+
+            }
+
+
+
+            if (miReserva.estado === "pendiente_modificacion") {
+
+                return {
+
+                    label: "Modificación",
+
+                    clase:
+                        "bg-amber-100 border-amber-300 text-amber-700"
+
+                };
+
+            }
+
+
+
 
             return {
 
@@ -157,6 +197,8 @@ export function ShiftGridSelector({ bloques, fechasVisibles, disponibilidad, mis
 
             };
 
+
+        }
 
 
         const reserva =
