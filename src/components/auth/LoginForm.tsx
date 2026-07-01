@@ -10,7 +10,7 @@ export default function LoginForm() {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false); // Estado para el "ojito"
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -104,7 +104,7 @@ export default function LoginForm() {
                         type={showPassword ? "text" : "password"} // Cambia dinámicamente
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-upds-primary/20 focus:border-upds-primary transition-all duration-200 bg-slate-50"
+                        className="block w-full mb-10 pl-10 pr-12 py-3 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-upds-primary/20 focus:border-upds-primary transition-all duration-200 bg-slate-50"
                         placeholder="••••••••"
                         required
                         disabled={loading}
@@ -113,7 +113,7 @@ export default function LoginForm() {
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-upds-primary transition-colors"
+                        className="absolute  inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-upds-primary transition-colors"
                     >
                         {showPassword ? (
                             // Icono de ojo cerrado
@@ -128,25 +128,6 @@ export default function LoginForm() {
                             </svg>
                         )}
                     </button>
-                </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                    <input
-                        id="remember-me"
-                        type="checkbox"
-                        className="h-4 w-4 text-upds-primary focus:ring-upds-primary border-slate-300 rounded cursor-pointer"
-                        disabled={loading}
-                    />
-                    <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600 cursor-pointer">
-                        Recordarme
-                    </label>
-                </div>
-                <div className="text-sm">
-                    <a href="#" className="font-medium text-upds-primary hover:text-upds-primary/80 transition-colors">
-                        ¿Olvidaste tu contraseña?
-                    </a>
                 </div>
             </div>
 

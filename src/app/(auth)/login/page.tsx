@@ -1,4 +1,6 @@
 import LoginForm from "@/components/auth/LoginForm";
+import { FlaskConical } from "lucide-react";
+
 
 export default function LoginPage() {
     return (
@@ -10,10 +12,10 @@ export default function LoginPage() {
 
                     {/* Logo / Marca Header */}
                     <div className="z-10 flex items-center gap-2">
-                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19.741 7.259l-7-5a1 1 0 00-1.166 0l-7 5A1 1 0 004 8v8a1 1 0 00.416.816l7 5a1 1 0 001.168 0l7-5A1 1 0 0020 16V8a1 1 0 00-.259-.741zM12 4.142l5.4 3.858-5.4 3.858-5.4-3.858L12 4.142zm-6 5.5l5 3.571v7.143l-5-3.571v-7.142zm7 10.714v-7.143l5-3.571v7.142l-5 3.572z" />
-                        </svg>
-                        <span className="text-xl font-bold tracking-tight">UPDS Labs</span>
+                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10">
+                            <FlaskConical size={20} />
+                        </div>
+                        <span className="text-xl font-bold tracking-tight">LABCLICK UPDS</span>
                     </div>
 
                     {/* Tarjeta de Información Glassmorphism */}
@@ -39,7 +41,7 @@ export default function LoginPage() {
                         <svg className="w-10 h-10 text-upds-primary" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M19.741 7.259l-7-5a1 1 0 00-1.166 0l-7 5A1 1 0 004 8v8a1 1 0 00.416.816l7 5a1 1 0 001.168 0l7-5A1 1 0 0020 16V8a1 1 0 00-.259-.741zM12 4.142l5.4 3.858-5.4 3.858-5.4-3.858L12 4.142zm-6 5.5l5 3.571v7.143l-5-3.571v-7.142zm7 10.714v-7.143l5-3.571v7.142l-5 3.572z" />
                         </svg>
-                        <span className="text-2xl font-bold text-upds-primary">UPDS Labs</span>
+                        <span className="text-2xl font-bold text-upds-primary">LabclickUPDS</span>
                     </div>
 
                     {/* Contenedor del Formulario */}

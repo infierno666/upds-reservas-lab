@@ -44,7 +44,7 @@ export function AppSidebar({
 
                 {!collapsed && (
                     <span className="font-bold text-sm tracking-wide">
-                        UPDS LAB
+                        LABCLICK UPDS
                     </span>
                 )}
             </div>
@@ -67,7 +67,7 @@ export function AppSidebar({
                                             ? "bg-white/20 font-semibold"
                                             : "hover:bg-white/10"
                                         }
-                  `}
+                    `}
                                 >
                                     <Icon size={18} />
 
