@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Menu, X } from "lucide-react";
+import { NotificacionesBell } from "@/components/layout/NotificacionesBell";
 
 type Role = "admin" | "docente";
 
@@ -43,32 +44,124 @@ function DashboardLayoutWrapper({ children, role, userEmail }: Props) {
                 {/* ========================================== */}
                 {/* HEADER SUPERIOR CON LOGO OFICIAL */}
                 {/* ========================================== */}
-                <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl px-4 md:px-6 sticky top-0 z-40 shadow-sm">
+               <header className="
+    flex 
+    h-16 
+    shrink-0 
+    items-center 
+    gap-3 
+    border-b 
+    border-slate-200/60 
+    bg-white/80 
+    backdrop-blur-xl 
+    px-4 
+    md:px-6 
+    sticky 
+    top-0 
+    z-40 
+    shadow-sm
+">
 
-                    {/* Trigger Desktop */}
-                    <SidebarTrigger className="hidden md:inline-flex p-2.5 rounded-xl text-slate-500 hover:bg-[#004B87]/5 hover:text-[#004B87] transition-all" />
 
-                    {/* Trigger Mobile */}
-                    <button
-                        onClick={() => setOpenMobile(!openMobile)}
-                        className="inline-flex md:hidden p-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-[#004B87] transition-all focus:outline-none focus:ring-2 focus:ring-[#004B87]/20"
-                    >
-                        {openMobile ? <X size={22} /> : <Menu size={22} />}
-                    </button>
+    {/* Trigger Desktop */}
 
-                    {/* Branding Logo */}
-                    <div className="flex items-center pl-1 md:pl-3">
-                        <div className="relative w-[150px] h-[40px] md:w-[250px] md:h-[60px]">
-                            <Image
-                                src="/logo-LARGO.png"
-                                alt="Logo UPDS"
-                                fill
-                                className="object-contain object-left"
-                                priority
-                            />
-                        </div>
-                    </div>
-                </header>
+    <SidebarTrigger
+        className="
+        hidden 
+        md:inline-flex 
+        p-2.5 
+        rounded-xl 
+        text-slate-500 
+        hover:bg-[#004B87]/5 
+        hover:text-[#004B87] 
+        transition-all
+        "
+    />
+
+
+
+    {/* Trigger Mobile */}
+
+    <button
+        onClick={() => setOpenMobile(!openMobile)}
+        className="
+        inline-flex 
+        md:hidden 
+        p-2.5 
+        rounded-xl 
+        text-slate-600 
+        hover:bg-slate-100 
+        hover:text-[#004B87] 
+        transition-all 
+        focus:outline-none 
+        focus:ring-2 
+        focus:ring-[#004B87]/20
+        "
+    >
+
+        {openMobile 
+            ? <X size={22}/> 
+            : <Menu size={22}/>
+        }
+
+    </button>
+
+
+
+
+
+    {/* Branding Logo */}
+
+    <div className="
+        flex 
+        items-center 
+        pl-1 
+        md:pl-3
+    ">
+
+        <div className="
+            relative 
+            w-[150px] 
+            h-[40px] 
+            md:w-[250px] 
+            md:h-[60px]
+        ">
+
+            <Image
+                src="/logo-LARGO.png"
+                alt="Logo UPDS"
+                fill
+                className="
+                object-contain 
+                object-left
+                "
+                priority
+            />
+
+        </div>
+
+    </div>
+
+
+
+
+    {/* DERECHA HEADER */}
+
+    <div className="ml-auto flex items-center gap-3">
+
+
+        {/* Notificaciones SOLO DOCENTE */}
+
+        {role === "docente" && (
+
+            <NotificacionesBell />
+
+        )}
+
+    </div>
+
+
+</header>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
                     <main className="flex flex-col w-full h-full min-h-full p-4 md:p-6 lg:p-8 transition-all duration-300">
