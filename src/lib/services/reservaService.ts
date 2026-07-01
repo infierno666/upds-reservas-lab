@@ -140,9 +140,8 @@ export const getMisReservas = async (
     const to = from + pageSize - 1;
 
     const stringQuery = filters?.materia_actividad
-        ? "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorio_id, materia_id, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias!inner(id, nombre)"
-        : "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorio_id, materia_id, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias(id, nombre)";
-
+        ? "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorio_id, materia_id, asistencia_confirmada, asistencia_resuelta_por_timeout, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias!inner(id, nombre)"
+        : "id, grupo_solicitud_id, fecha, estado, periodo_modulo, periodo_anio, created_at, laboratorio_id, materia_id, asistencia_confirmada, asistencia_resuelta_por_timeout, laboratorios(nombre), bloques_horarios(turno, periodo, hora_inicio, hora_fin), materias(id, nombre)";
     let query = supabase
         .from('reservas')
         .select(stringQuery, { count: 'exact' });
@@ -376,4 +375,18 @@ export const solicitarModificacionAprobada = async (reservaId: string, nuevaFech
 
     if (error) throw new Error(error.message);
     return true;
+};
+
+// Confirma si el docente usó o no su reserva aprobada
+export const confirmarAsistencia = async (
+    reservaId: string,
+    usoConfirmado: boolean
+): Promise<void> => {
+    const supabase = createClient();
+    const { error } = await supabase.rpc('confirmar_uso_reserva', {
+        p_reserva_id: reservaId,
+        p_uso_confirmado: usoConfirmado,
+        p_descripcion_reporte: null,
+    });
+    if (error) throw new Error(error.message);
 };

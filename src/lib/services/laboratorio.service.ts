@@ -80,3 +80,18 @@ export const deshabilitarLaboratorio = async (id: string, motivo: string): Promi
 
   if (error) throw new Error(error.message);
 };
+
+// Crea un bloqueo preventivo en fechas especificas (mantenimiento o evento)
+export const crearBloqueoPreventivo = async (
+  laboratorioId: string,
+  fechas: string[],
+  motivo: string
+): Promise<void> => {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('crear_bloqueo_preventivo', {
+    p_laboratorio_id: laboratorioId,
+    p_fechas: fechas,
+    p_motivo: motivo.trim(),
+  });
+  if (error) throw new Error(error.message);
+};

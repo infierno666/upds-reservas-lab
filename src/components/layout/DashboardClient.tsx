@@ -7,6 +7,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { NotificacionesBell } from "@/components/layout/NotificacionesBell";
 
 type Role = "admin" | "docente";
 
@@ -61,6 +62,13 @@ export default function DashboardClient({
                             <span className="font-semibold text-gray-800 text-sm">
                                 Panel de Control
                             </span>
+
+                            {/* Campana de notificaciones — solo visible para docentes */}
+                            {role === 'docente' && (
+                                <div className="ml-auto">
+                                    <NotificacionesBell />
+                                </div>
+                            )}
                         </header>
 
                         {/* 🔥 SCROLL SOLO AQUÍ */}
