@@ -394,70 +394,64 @@ export const confirmarAsistencia = async (
 // =========================================================================
 // 6. CALENDARIO
 // =========================================================================
-
 export const getCalendarioReservas = async (
     inicio: string,
     fin: string,
-    laboratorioId?: string
+    filtros?: {
+        laboratorioId?: string;
+        estado?: string;
+        soloMisReservas?: boolean;
+    }
 ) => {
     const supabase = createClient();
+    let userId = null;
+
+    // Si requiere filtrar por mis reservas, obtenemos el usuario autenticado
+    if (filtros?.soloMisReservas) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) userId = user.id;
+    }
 
     let query = supabase
         .from("reservas")
-        .select(
-            `
+        .select(`
             id,
             fecha,
             estado,
             laboratorio_id,
-
-            laboratorios(
-                nombre
-            ),
-
-            materias(
-                nombre
-            ),
-
-            bloques_horarios(
-                hora_inicio,
-                hora_fin,
-                turno
-            )
-
-        `
-        )
+            usuario_id,
+            laboratorios(nombre),
+            materias(nombre),
+            bloques_horarios(hora_inicio, hora_fin, turno)
+        `)
         .gte("fecha", inicio)
         .lte("fecha", fin);
 
-    if (laboratorioId) {
-        query = query.eq("laboratorio_id", laboratorioId);
+    // Aplicar filtros dinámicos si existen
+    if (filtros?.laboratorioId) {
+        query = query.eq("laboratorio_id", filtros.laboratorioId);
+    }
+    if (filtros?.estado) {
+        query = query.eq("estado", filtros.estado);
+    }
+    if (filtros?.soloMisReservas && userId) {
+        query = query.eq("usuario_id", userId);
     }
 
-    const { data, error } = await query.order("fecha", {
-        ascending: true,
-    });
+    const { data, error } = await query.order("fecha", { ascending: true });
 
     if (error) throw new Error(error.message);
 
     return (
         data?.map((reserva: any) => ({
             id: reserva.id,
-
-            title: `${reserva.laboratorios?.nombre ?? "Laboratorio"}
-            - ${reserva.materias?.nombre ?? "Reserva"}`,
-
+            title: `${reserva.laboratorios?.nombre ?? "Laboratorio"} - ${reserva.materias?.nombre ?? "Reserva"}`,
             start: `${reserva.fecha}T${reserva.bloques_horarios.hora_inicio}`,
-
             end: `${reserva.fecha}T${reserva.bloques_horarios.hora_fin}`,
-
             extendedProps: {
                 estado: reserva.estado,
-
                 laboratorio: reserva.laboratorios?.nombre,
-
                 materia: reserva.materias?.nombre,
-
                 turno: reserva.bloques_horarios?.turno,
             },
         })) || []
