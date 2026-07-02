@@ -8,6 +8,7 @@ import { FilterBar } from "@/components/reservas/FilterBar";
 import { CustomModal } from "@/components/ui/CustomModal";
 import { Toast, ToastType } from "@/components/ui/toast";
 import { ConfirmarAsistenciaModal } from "@/components/reservas/ConfirmarAsistenciaModal";
+import { ReservasListMobile } from "@/components/reservas/ReservasListMobile";
 import {
   FlaskConical, Loader2, Plus, Trash2, CalendarDays,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock, AlertCircle, CalendarRange, Edit2
@@ -145,8 +146,7 @@ export default function MisReservasPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 w-full max-w-[95%] xl:max-w-[1800px] mx-auto flex flex-col h-full space-y-6 animate-in fade-in duration-500">
-
+    <div className="p-4 md:p-8 w-full max-w-[95%] xl:max-w-[1800px] mx-auto flex flex-col lg:h-full space-y-6 animate-in fade-in duration-500">
       {/* Notificaciones flotantes */}
       <Toast
         show={toast.show}
@@ -202,8 +202,8 @@ export default function MisReservasPage() {
       <FilterBar onFilterChange={(newF: any) => { setFilters({ ...filters, ...newF }); setPage(1); }} />
 
       {/* Tabla principal */}
-      <div className="flex-1 bg-white border border-slate-200 rounded-3xl shadow-sm flex flex-col overflow-hidden">
-        <div className="overflow-x-auto flex-1">
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm flex flex-col lg:flex-1 lg:overflow-hidden">
+        <div className="overflow-x-auto flex-1 hidden lg:block">
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
               <tr>
@@ -382,6 +382,20 @@ export default function MisReservasPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Vista mobile: tarjetas */}
+        <div className="lg:hidden">
+          <ReservasListMobile
+            isError={isError}
+            isLoading={isLoading}
+            error={error}
+            gruposAgrupados={gruposAgrupados}
+            expandedGroup={expandedGroup}
+            setExpandedGroup={setExpandedGroup}
+            setModalAction={setModalAction}
+            setModalAsistencia={setModalAsistencia}
+          />
         </div>
 
         {/* Paginación */}
