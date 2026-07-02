@@ -62,27 +62,27 @@ export default function CalendarView({ events }: Props) {
     };
 
     return (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-3 sm:p-4 md:p-6 flex flex-col h-full min-h-[600px] w-full max-w-full overflow-x-hidden">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm p-2.5 sm:p-4 md:p-6 flex flex-col h-full min-h-[480px] sm:min-h-[600px] w-full max-w-full overflow-x-hidden">
 
             {/* LEYENDA DE COLORES */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 mb-4 pb-4 border-b border-slate-100 shrink-0">
-                <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">Leyenda:</span>
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600">
-                    <div className="w-3 h-3 rounded-[4px] bg-emerald-100 border-l-2 border-emerald-500"></div> Aprobada
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-2 sm:gap-4 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-slate-100 shrink-0">
+                <span className="w-full md:w-auto text-center md:text-left text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">Leyenda:</span>
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-sm font-bold text-slate-600">
+                    <div className="w-3 h-3 shrink-0 rounded-[4px] bg-emerald-100 border-l-2 border-emerald-500"></div> Aprobada
                 </div>
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600">
-                    <div className="w-3 h-3 rounded-[4px] bg-amber-100 border-l-2 border-amber-500"></div> Pendiente
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-sm font-bold text-slate-600">
+                    <div className="w-3 h-3 shrink-0 rounded-[4px] bg-amber-100 border-l-2 border-amber-500"></div> Pendiente
                 </div>
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600">
-                    <div className="w-3 h-3 rounded-[4px] bg-purple-100 border-l-2 border-purple-500"></div> Modificación
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-sm font-bold text-slate-600">
+                    <div className="w-3 h-3 shrink-0 rounded-[4px] bg-purple-100 border-l-2 border-purple-500"></div> Modificación
                 </div>
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600">
-                    <div className="w-3 h-3 rounded-[4px] bg-red-100 border-l-2 border-red-500"></div> Rechazada
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-sm font-bold text-slate-600">
+                    <div className="w-3 h-3 shrink-0 rounded-[4px] bg-red-100 border-l-2 border-red-500"></div> Rechazada
                 </div>
             </div>
 
             {/* FULLCALENDAR */}
-            <div className="flex-1 min-h-[500px] w-full overflow-hidden calendar-wrapper">
+            <div className="flex-1 min-h-[420px] sm:min-h-[500px] w-full overflow-hidden calendar-wrapper">
                 <FullCalendar
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                     initialView={vista}
@@ -122,6 +122,118 @@ export default function CalendarView({ events }: Props) {
                     }}
                 />
             </div>
+
+            {/* Estilos responsivos inyectados al core de FullCalendar (no se puede tocar vía Tailwind) */}
+            <style jsx global>{`
+                /* --- Toolbar: evita overflow y quiebre feo en pantallas chicas --- */
+                .calendar-wrapper .fc-header-toolbar {
+                    display: flex;
+                    flex-wrap: wrap;
+                    row-gap: 0.6rem;
+                    column-gap: 0.75rem;
+                    margin-bottom: 1rem !important;
+                }
+                .calendar-wrapper .fc-toolbar-chunk {
+                    display: flex;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                    gap: 0.35rem;
+                }
+                .calendar-wrapper .fc-toolbar-title {
+                    font-size: clamp(0.95rem, 2.5vw, 1.25rem);
+                    font-weight: 800;
+                    color: #0f172a;
+                    white-space: nowrap;
+                }
+                .calendar-wrapper .fc-button {
+                    background: #f8fafc !important;
+                    border: 1px solid #e2e8f0 !important;
+                    color: #334155 !important;
+                    font-weight: 700 !important;
+                    font-size: 0.75rem !important;
+                    padding: 0.4rem 0.7rem !important;
+                    box-shadow: none !important;
+                    text-transform: capitalize;
+                    line-height: 1.1;
+                }
+                .calendar-wrapper .fc-button:hover {
+                    background: #f1f5f9 !important;
+                }
+                .calendar-wrapper .fc-button:focus-visible {
+                    outline: 2px solid #004b87 !important;
+                    outline-offset: 1px;
+                }
+                .calendar-wrapper .fc-button-primary:not(:disabled).fc-button-active,
+                .calendar-wrapper .fc-button-primary:not(:disabled):active {
+                    background: #004b87 !important;
+                    border-color: #004b87 !important;
+                    color: #fff !important;
+                }
+                .calendar-wrapper .fc-icon {
+                    font-size: 1em;
+                }
+
+                /* --- Scrollbars finos y consistentes en el grid horario --- */
+                .calendar-wrapper .fc-scroller {
+                    scrollbar-width: thin;
+                    scrollbar-color: #cbd5e1 transparent;
+                    -webkit-overflow-scrolling: touch;
+                }
+                .calendar-wrapper .fc-scroller::-webkit-scrollbar {
+                    width: 6px;
+                    height: 6px;
+                }
+                .calendar-wrapper .fc-scroller::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .calendar-wrapper .fc-scroller::-webkit-scrollbar-thumb {
+                    background-color: #cbd5e1;
+                    border-radius: 999px;
+                }
+                .calendar-wrapper .fc-scroller::-webkit-scrollbar-thumb:hover {
+                    background-color: #94a3b8;
+                }
+
+                /* --- Popover "+X más" adaptado a pantallas chicas --- */
+                .calendar-wrapper .fc-popover {
+                    max-width: 90vw;
+                    border-radius: 0.75rem !important;
+                    overflow: hidden;
+                    box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.25) !important;
+                }
+                .calendar-wrapper .fc-popover-header {
+                    background: #f8fafc !important;
+                    font-weight: 700;
+                }
+
+                /* --- Ajustes tablet / móvil --- */
+                @media (max-width: 767px) {
+                    .calendar-wrapper .fc-header-toolbar {
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+                    .calendar-wrapper .fc-toolbar-title {
+                        text-align: center;
+                        order: -1;
+                    }
+                    .calendar-wrapper .fc-button {
+                        padding: 0.4rem 0.6rem !important;
+                        font-size: 0.7rem !important;
+                    }
+                }
+
+                @media (max-width: 480px) {
+                    .calendar-wrapper .fc-col-header-cell-cushion,
+                    .calendar-wrapper .fc-daygrid-day-number {
+                        font-size: 0.7rem;
+                    }
+                    .calendar-wrapper .fc-button {
+                        padding: 0.35rem 0.5rem !important;
+                        font-size: 0.65rem !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 }

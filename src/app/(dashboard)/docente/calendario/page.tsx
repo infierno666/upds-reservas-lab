@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import CalendarView from "@/components/calendario/CalendarView";
 import { getCalendarioReservas, getLaboratorios } from "@/lib/services/reservaService";
-import { Loader2, CalendarDays, Filter, MapPin, CheckCircle2, User } from "lucide-react";
+import { Loader2, CalendarDays, Filter, MapPin, CheckCircle2, User, ChevronDown } from "lucide-react";
 
 export default function CalendarioDocentePage() {
     // Estado del rango del calendario
@@ -73,6 +73,7 @@ export default function CalendarioDocentePage() {
                                 <option key={lab.id} value={lab.id}>{lab.nombre}</option>
                             ))}
                         </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
 
                     {/* Filtro: Estados (LISTA COMPLETA) */}
@@ -90,6 +91,7 @@ export default function CalendarioDocentePage() {
                             <option value="rechazada">🔴 Rechazadas</option>
                             <option value="cancelada">⚪ Canceladas</option>
                         </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
 
                     {/* Toggle: Mis Reservas */}
@@ -114,9 +116,9 @@ export default function CalendarioDocentePage() {
             </div>
 
             {/* CONTENIDO DEL CALENDARIO */}
-            <div className="flex-1 min-h-[500px] bg-slate-50/30 rounded-3xl z-0 relative flex flex-col">
+            <div className="flex-1 min-h-[420px] sm:min-h-[500px] bg-slate-50/30 rounded-2xl sm:rounded-3xl z-0 relative flex flex-col">
                 {isLoading && (
-                    <div className="absolute inset-0 flex flex-col justify-center items-center gap-4 bg-white/60 backdrop-blur-sm z-20 rounded-3xl border border-slate-200">
+                    <div className="absolute inset-0 flex flex-col justify-center items-center gap-4 bg-white/60 backdrop-blur-sm z-20 rounded-2xl sm:rounded-3xl border border-slate-200">
                         <div className="p-4 bg-white rounded-full shadow-lg border border-slate-100">
                             <Loader2 size={36} className="animate-spin text-[#004B87]" />
                         </div>
