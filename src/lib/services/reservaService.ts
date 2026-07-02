@@ -419,7 +419,7 @@ export const getCalendarioReservas = async (
             fecha,
             estado,
             laboratorio_id,
-            usuario_id,
+            docente_id,
             laboratorios(nombre),
             materias(nombre),
             bloques_horarios(hora_inicio, hora_fin, turno)
@@ -435,7 +435,7 @@ export const getCalendarioReservas = async (
         query = query.eq("estado", filtros.estado);
     }
     if (filtros?.soloMisReservas && userId) {
-        query = query.eq("usuario_id", userId);
+        query = query.eq("docente_id", userId);
     }
 
     const { data, error } = await query.order("fecha", { ascending: true });

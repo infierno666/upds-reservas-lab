@@ -77,7 +77,7 @@ export default function NuevaReservaPage() {
     setIsLoadingCatalogs(true);
     Promise.all([getLaboratorios(), getBloquesHorarios(), getMaterias()])
       .then(([labs, blqs, mats]) => {
-        setLaboratorios(labs);
+        setLaboratorios((labs || []).filter((lab: any) => lab.estado_operativo === "activo"));
         setBloques(blqs);
         setMaterias(mats);
       })
