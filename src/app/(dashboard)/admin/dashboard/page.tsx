@@ -1,66 +1,91 @@
 'use client';
 
-import React from 'react';
-import { Laptop, Calendar, Inbox, BarChart3, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { StatsCards } from '@/components/dashboard/admin/StatsCards';
+import { GraficoUsoSemanal } from '@/components/dashboard/admin/GraficoUsoSemanal';
+import { GraficoDistribucionHorarios } from '@/components/dashboard/admin/GraficoDistribucionHorarios';
+import { SolicitudesUrgentes } from '@/components/dashboard/admin/SolicitudesUrgentes';
+import {
+    getKPIsAdmin, getDatosGraficoSemanal, getDatosGraficoHorarios,
+    KPIsAdmin, DatoGraficoSemanal, DatoGraficoHorarios
+} from '@/lib/services/dashboard.admin.service';
+import { getSolicitudesPendientes, SolicitudGrupo } from '@/lib/services/admin.service';
+import { CustomModal } from '@/components/ui/CustomModal';
 
 export default function AdminDashboard() {
-    return (
-        <div className="p-8 bg-gray-50 min-h-screen">
-            <h1 className="text-2xl font-bold mb-1">Vista General</h1>
-            <p className="text-gray-500 mb-6">Resumen del estado actual de los laboratorios e instalaciones.</p>
+    const [kpis, setKpis] = useState<KPIsAdmin | null>(null);
+    const [graficoSemanal, setGraficoSemanal] = useState<DatoGraficoSemanal[]>([]);
+    const [graficoHorarios, setGraficoHorarios] = useState<DatoGraficoHorarios[]>([]);
+    const [solicitudes, setSolicitudes] = useState<SolicitudGrupo[]>([]);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                {[
-                    { title: "Laboratorios Activos", val: "12", sub: "/ 15 Total", icon: Laptop },
-                    { title: "Reservas Hoy", val: "48", sub: "↑ 12%", icon: Calendar },
-                    { title: "Solicitudes Pendientes", val: "7", sub: "Requieren atención", icon: Inbox },
-                    { title: "Ocupación Promedio", val: "76%", sub: "----", icon: BarChart3 },
-                ].map((stat, i) => (
-                    <div key={i} className="bg-white p-5 rounded-2xl border shadow-sm">
-                        <div className="flex justify-between items-start mb-2">
-                            <stat.icon className="text-blue-900" size={24} />
-                        </div>
-                        <p className="text-sm text-gray-500">{stat.title}</p>
-                        <p className="text-2xl font-bold mt-1">{stat.val}</p>
-                        <p className="text-xs text-gray-400 mt-1">{stat.sub}</p>
-                    </div>
+    useEffect(() => {
+        const cargar = async () => {
+            setCargando(true);
+            try {
+                // Carga todos los datos en paralelo para minimizar tiempo de espera
+                const [k, gs, gh, sol] = await Promise.all([
+                    getKPIsAdmin(),
+                    getDatosGraficoSemanal(),
+                    getDatosGraficoHorarios(),
+                    getSolicitudesPendientes(),
+                ]);
+                setKpis(k);
+                setGraficoSemanal(gs);
+                setGraficoHorarios(gh);
+                setSolicitudes(sol);
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setCargando(false);
+            }
+        };
+        cargar();
+    }, []);
+
+    if (cargando) return (
+        <div className="p-8 max-w-[1600px] mx-auto space-y-6">
+            <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse" />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-32 bg-slate-100 rounded-2xl animate-pulse" />
                 ))}
             </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 h-64 bg-slate-100 rounded-2xl animate-pulse" />
+                <div className="h-64 bg-slate-100 rounded-2xl animate-pulse" />
+            </div>
+            <div className="h-64 bg-slate-100 rounded-2xl animate-pulse" />
+        </div>
+    );
 
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border shadow-sm">
-                    <h3 className="font-bold mb-6">Uso de Laboratorios por Semana</h3>
-                    {/* Placeholder gráfico */}
-                    <div className="h-48 bg-slate-50 border-dashed border-2 flex items-center justify-center text-gray-400">
-                        [Gráfico de líneas aquí - Recharts]
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl border shadow-sm">
-                    <h3 className="font-bold mb-6">Distribución por Horarios</h3>
-                    <div className="h-48 bg-slate-50 border-dashed border-2 flex items-center justify-center text-gray-400">
-                        [Gráfico Donut aquí - Recharts]
-                    </div>
-                </div>
+    return (
+        <div className="p-8 max-w-[1600px] mx-auto space-y-6">
+            {/* Cabecera */}
+            <div>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Vista General</h1>
+                <p className="text-slate-500 font-medium mt-1">Resumen del estado actual de los laboratorios.</p>
             </div>
 
-            {/* Solicitudes Urgentes */}
-            <div className="bg-white p-6 rounded-2xl border shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-bold flex items-center gap-2"><AlertCircle size={20} className="text-red-500" /> Solicitudes Urgentes</h3>
-                    <a href="#" className="text-sm text-blue-600 font-semibold">VER TODAS</a>
+            {/* KPIs */}
+            {kpis && <StatsCards kpis={kpis} />}
+
+            {/* Gráficos */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <GraficoUsoSemanal datos={graficoSemanal} />
                 </div>
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <div>
-                            <p className="font-bold">Ing. Carlos Mendoza</p>
-                            <p className="text-sm text-gray-500">Cambio de proyector en Lab 3 - Ingeniería</p>
-                        </div>
-                        <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">ALTA PRIORIDAD</span>
-                    </div>
-                </div>
+                <GraficoDistribucionHorarios datos={graficoHorarios} />
             </div>
+
+            {/* Solicitudes pendientes */}
+            <SolicitudesUrgentes solicitudes={solicitudes} />
+
+            {error && (
+                <CustomModal isOpen={!!error} type="error" title="Error al cargar dashboard"
+                    message={error} onClose={() => setError(null)} />
+            )}
         </div>
     );
 }

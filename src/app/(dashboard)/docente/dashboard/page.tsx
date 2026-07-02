@@ -1,83 +1,109 @@
 'use client';
 
-import React from 'react';
-import { Calendar, Clock, Inbox, CheckCircle2, ChevronRight, Plus, Table, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { StatsCardsDocente } from '@/components/dashboard/docente/StatsCards';
+import { ProximaReserva } from '@/components/dashboard/docente/ProximaReserva';
+import { AccionesRapidas } from '@/components/dashboard/docente/AccionesRapidas';
+import { UltimasSolicitudes } from '@/components/dashboard/docente/UltimasSolicitudes';
+import { CustomModal } from '@/components/ui/CustomModal';
+import {
+  getKPIsDocente, getUltimasSolicitudes,
+  KPIsDocente, UltimaSolicitud
+} from '@/lib/services/dashboard.docente.service';
+import { createClient } from '@/lib/supabase/client';
 
 export default function DocenteDashboard() {
-    const solicitudes = [
-        { lab: "Lab 1 - Cómputo", fecha: "20/06/2026", hora: "08:00 - 10:00", estado: "Pendiente" },
-        { lab: "Lab 3 - Física", fecha: "18/06/2026", hora: "10:00 - 12:00", estado: "Aprobado" },
-    ];
+  const [kpis, setKpis] = useState<KPIsDocente | null>(null);
+  const [solicitudes, setSolicitudes] = useState<UltimaSolicitud[]>([]);
+  const [nombreDocente, setNombreDocente] = useState('Docente');
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    return (
-        <div className="p-8 bg-gray-50 min-h-screen">
-            <h1 className="text-2xl font-bold mb-2">Hola, Docente</h1>
-            <p className="text-gray-500 mb-6">Aquí tienes el resumen de tus actividades en laboratorios.</p>
+  useEffect(() => {
+    const cargar = async () => {
+      setCargando(true);
+      try {
+        // Obtiene el nombre del docente autenticado
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: perfil } = await supabase
+            .from('perfiles')
+            .select('nombre_completo')
+            .eq('id', user.id)
+            .single();
+          if (perfil?.nombre_completo) {
+            setNombreDocente(perfil.nombre_completo.split(' ')[0]);
+          }
+        }
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                {[
-                    { title: "Siguiente Reserva", val: "Lab 3 - Física", sub: "18/06/2026 • 10:00", icon: Calendar },
-                    { title: "Solicitudes Pendientes", val: "3", sub: "Requieren atención", icon: Inbox },
-                    { title: "Reservas Aprobadas", val: "12", sub: "Este mes", icon: CheckCircle2 },
-                    { title: "Horas Utilizadas", val: "24.5", sub: "Hrs totales", icon: Clock },
-                ].map((stat, i) => (
-                    <div key={i} className="bg-white p-5 rounded-2xl border shadow-sm">
-                        <div className="flex justify-between items-start mb-2">
-                            <stat.icon className="text-blue-600" size={24} />
-                        </div>
-                        <p className="text-sm text-gray-500">{stat.title}</p>
-                        <p className="text-xl font-bold mt-1">{stat.val}</p>
-                        <p className="text-xs text-gray-400 mt-1">{stat.sub}</p>
-                    </div>
-                ))}
-            </div>
+        // Carga KPIs y solicitudes en paralelo
+        const [k, sol] = await Promise.all([
+          getKPIsDocente(),
+          getUltimasSolicitudes(),
+        ]);
+        setKpis(k);
+        setSolicitudes(sol);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargar();
+  }, []);
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Col */}
-                <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border shadow-sm">
-                        <h3 className="font-bold mb-4">Acciones Rápidas</h3>
-                        <button className="w-full bg-blue-950 text-white py-3 rounded-lg flex items-center justify-center gap-2 mb-3">
-                            <Plus size={18} /> NUEVA RESERVA
-                        </button>
-                        <button className="w-full border py-3 rounded-lg flex items-center justify-center gap-2 mb-3"><Calendar size={18} /> Ver Calendario</button>
-                        <button className="w-full border py-3 rounded-lg flex items-center justify-center gap-2"><Table size={18} /> Mis Reservas</button>
-                    </div>
-                </div>
+  // Skeleton de carga responsive
+  if (cargando) return (
+    <div className="p-6 md:p-8 w-full space-y-6">
+      <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-28 bg-slate-100 rounded-2xl animate-pulse" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="h-48 bg-slate-100 rounded-2xl animate-pulse" />
+        <div className="h-48 bg-slate-100 rounded-2xl animate-pulse" />
+        <div className="h-48 bg-slate-100 rounded-2xl animate-pulse lg:col-span-1" />
+      </div>
+      <div className="h-64 bg-slate-100 rounded-2xl animate-pulse" />
+    </div>
+  );
 
-                {/* Right Col */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border shadow-sm">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-bold">Últimas Solicitudes</h3>
-                        <a href="#" className="text-sm text-blue-600">Ver todas</a>
-                    </div>
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="text-gray-400 border-b">
-                                <th className="text-left pb-3">LABORATORIO</th>
-                                <th className="text-left pb-3">FECHA</th>
-                                <th className="text-left pb-3">HORARIO</th>
-                                <th className="text-left pb-3">ESTADO</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {solicitudes.map((s, i) => (
-                                <tr key={i} className="border-b last:border-0">
-                                    <td className="py-4 font-medium">{s.lab}</td>
-                                    <td className="py-4 text-gray-600">{s.fecha}</td>
-                                    <td className="py-4 text-gray-600">{s.hora}</td>
-                                    <td className="py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs ${s.estado === 'Aprobado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                            ● {s.estado}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+  return (
+    <div className="p-8 max-w-[1600px] mx-auto space-y-6">
+      <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+        Hola, {nombreDocente}
+      </h1>
+      <p className="text-slate-500 font-medium mt-1">
+        Aquí tienes el resumen de tus actividades en laboratorios.
+      </p>
+
+      {/* KPIs — 2 columnas en móvil, 4 en desktop */}
+      {kpis && <StatsCardsDocente kpis={kpis} />}
+
+      {/* Fila principal — stack en móvil, 3 columnas en desktop */}
+      {kpis && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Próxima reserva — ocupa 2 columnas en desktop */}
+          <div className="md:col-span-2">
+            <ProximaReserva kpis={kpis} />
+          </div>
+          {/* Acciones rápidas */}
+          <AccionesRapidas />
         </div>
-    );
+      )}
+
+      {/* Últimas solicitudes — tabla en desktop, cards en móvil */}
+      <UltimasSolicitudes solicitudes={solicitudes} />
+
+      {error && (
+        <CustomModal isOpen={!!error} type="error"
+          title="Error al cargar dashboard"
+          message={error}
+          onClose={() => setError(null)} />
+      )}
+    </div>
+  );
 }
