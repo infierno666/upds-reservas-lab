@@ -2,58 +2,58 @@
 
 import React, { useMemo, useState } from "react";
 import {
-    Search,
-    Monitor,
-    CheckCircle2,
-    MapPin
+  Search,
+  Monitor,
+  CheckCircle2,
+  MapPin
 } from "lucide-react";
 
 
 interface Props {
-    laboratorios: any[];
-    laboratorioSeleccionado: string;
-    setLaboratorioSeleccionado: (id: string) => void;
+  laboratorios: any[];
+  laboratorioSeleccionado: string;
+  setLaboratorioSeleccionado: (id: string) => void;
 }
 
 
 export function LaboratoryHorizontalSelector({
 
-    laboratorios,
-    laboratorioSeleccionado,
-    setLaboratorioSeleccionado
+  laboratorios,
+  laboratorioSeleccionado,
+  setLaboratorioSeleccionado
 
 }: Props) {
 
 
-    const [busqueda, setBusqueda] = useState("");
+  const [busqueda, setBusqueda] = useState("");
 
 
 
-    const filtrados = useMemo(() => {
+  const filtrados = useMemo(() => {
 
 
-        return laboratorios.filter(lab =>
+    return laboratorios.filter(lab =>
 
-            lab.nombre
-                .toLowerCase()
-                .includes(
-                    busqueda.toLowerCase()
-                )
+      lab.nombre
+        .toLowerCase()
+        .includes(
+          busqueda.toLowerCase()
+        )
 
-        );
-
-
-    }, [
-        laboratorios,
-        busqueda
-    ]);
+    );
 
 
+  }, [
+    laboratorios,
+    busqueda
+  ]);
 
 
-    return (
 
-        <div className="
+
+  return (
+
+    <div className="
         bg-white
         border
         border-slate-200
@@ -64,17 +64,18 @@ export function LaboratoryHorizontalSelector({
         ">
 
 
-            {/* Header */}
+      {/* Header */}
 
-            <div className="
+      <div className="
             flex
-            items-center
+            flex-col
+            sm:flex-row
+            sm:items-center
             justify-between
-            gap-4
+            gap-3
             ">
 
-
-                <h3 className="
+        <h3 className="
                 font-black
                 text-slate-800
                 flex
@@ -83,50 +84,51 @@ export function LaboratoryHorizontalSelector({
                 ">
 
 
-                    <MapPin
-                        size={20}
-                        className="text-[#001D4A]"
-                    />
+          <MapPin
+            size={20}
+            className="text-[#001D4A]"
+          />
 
 
-                    Laboratorios disponibles
+          Laboratorios disponibles
 
 
-                </h3>
+        </h3>
 
 
 
-                <div className="
+        <div className="
                 relative
-                w-72
+                w-full
+                sm:w-72
                 ">
 
 
-                    <Search
+          <Search
 
-                        size={18}
+            size={18}
 
-                        className="
+            className="
                         absolute
                         left-3
                         top-3
                         text-slate-400
                         "
 
-                    />
+          />
 
 
-                    <input
+          <input
 
-                        value={busqueda}
+            value={busqueda}
 
-                        onChange={(e) =>
-                            setBusqueda(e.target.value)
-                        }
+            onChange={(e) =>
+              setBusqueda(e.target.value)
+            }
 
-                        placeholder="Buscar laboratorio..."
+            placeholder="Buscar laboratorio..."
 
-                        className="
+            className="
                         w-full
                         bg-slate-50
                         border
@@ -140,22 +142,22 @@ export function LaboratoryHorizontalSelector({
                         focus:ring-[#001D4A]/30
                         "
 
-                    />
+          />
 
 
-                </div>
-
-
-
-            </div>
+        </div>
 
 
 
+      </div>
 
 
-            {/* Cards horizontales */}
 
-            <div className="
+
+
+      {/* Cards horizontales */}
+
+      <div className="
 
             flex
             gap-4
@@ -167,33 +169,34 @@ export function LaboratoryHorizontalSelector({
 
 
 
-                {
-                    filtrados.map((lab) => {
+        {
+          filtrados.map((lab) => {
 
 
-                        const seleccionado =
-                            laboratorioSeleccionado === lab.id;
-
-
-
-                        return (
-
-
-                            <button
-
-
-                                key={lab.id}
-
-
-                                onClick={() =>
-                                    setLaboratorioSeleccionado(lab.id)
-                                }
+            const seleccionado =
+              laboratorioSeleccionado === lab.id;
 
 
 
-                                className={`
+            return (
 
-                            min-w-[280px]
+
+              <button
+
+
+                key={lab.id}
+
+
+                onClick={() =>
+                  setLaboratorioSeleccionado(lab.id)
+                }
+
+
+
+                className={`
+
+                            min-w-[200px]
+                            sm:min-w-[240px]
 
                             text-left
 
@@ -210,25 +213,25 @@ export function LaboratoryHorizontalSelector({
 
                             ${seleccionado
 
-                                        ?
+                    ?
 
-                                        "border-[#001D4A] bg-blue-50 shadow-lg"
+                    "border-[#001D4A] bg-blue-50 shadow-lg"
 
-                                        :
+                    :
 
-                                        "border-slate-200 bg-white hover:border-blue-300 hover:shadow-md"
+                    "border-slate-200 bg-white hover:border-blue-300 hover:shadow-md"
 
-                                    }
+                  }
 
                             `}
 
 
 
-                            >
+              >
 
 
 
-                                <div className="
+                <div className="
                             flex
                             justify-between
                             items-start
@@ -236,7 +239,7 @@ export function LaboratoryHorizontalSelector({
 
 
 
-                                    <h4 className="
+                  <h4 className="
                                 font-black
                                 text-slate-800
                                 flex
@@ -245,48 +248,48 @@ export function LaboratoryHorizontalSelector({
                                 ">
 
 
-                                        <MapPin
+                    <MapPin
 
-                                            size={18}
+                      size={18}
 
-                                            className="text-[#001D4A]"
+                      className="text-[#001D4A]"
 
-                                        />
-
-
-                                        {lab.nombre}
+                    />
 
 
-                                    </h4>
+                    {lab.nombre}
 
 
-
-
-
-                                    {
-
-                                        seleccionado &&
-
-
-                                        <CheckCircle2
-
-                                            size={22}
-
-                                            className="text-[#001D4A]"
-
-                                        />
-
-                                    }
-
-
-
-                                </div>
+                  </h4>
 
 
 
 
 
-                                <div className="
+                  {
+
+                    seleccionado &&
+
+
+                    <CheckCircle2
+
+                      size={22}
+
+                      className="text-[#001D4A]"
+
+                    />
+
+                  }
+
+
+
+                </div>
+
+
+
+
+
+                <div className="
                             mt-4
                             space-y-2
                             text-sm
@@ -294,53 +297,53 @@ export function LaboratoryHorizontalSelector({
 
 
 
-                                    <div className="
+                  <div className="
                                 flex
                                 gap-2
                                 text-slate-600
                                 ">
 
 
-                                        <Monitor size={16} />
+                    <Monitor size={16} />
 
 
-                                        <span>
+                    <span>
 
-                                            Capacidad:
+                      Capacidad:
 
-                                            <b className="ml-1">
+                      <b className="ml-1">
 
-                                                {lab.capacidad ?? "No definida"}
+                        {lab.capacidad ?? "No definida"}
 
-                                            </b>
-
-
-                                        </span>
+                      </b>
 
 
-                                    </div>
+                    </span>
 
 
+                  </div>
 
 
 
-                                    <p className="
+
+
+                  <p className="
                                 text-slate-500
                                 line-clamp-2
                                 ">
 
 
-                                        ⚙ {lab.caracteristicas ||
-                                            "Sin características registradas"}
+                    ⚙ {lab.caracteristicas ||
+                      "Sin características registradas"}
 
 
-                                    </p>
+                  </p>
 
 
 
 
 
-                                    <span className={`
+                  <span className={`
 
                                 inline-flex
 
@@ -358,67 +361,41 @@ export function LaboratoryHorizontalSelector({
                                 ${lab.estado_operativo === "activo"
 
 
-                                            ?
+                      ?
 
-                                            "bg-emerald-100 text-emerald-700"
-
-
-                                            :
-
-                                            "bg-red-100 text-red-700"
+                      "bg-emerald-100 text-emerald-700"
 
 
-                                        }
+                      :
+
+                      "bg-red-100 text-red-700"
+
+
+                    }
 
 
                                 `}>
 
 
-                                        {
+                    {
 
-                                            lab.estado_operativo === "activo"
+                      lab.estado_operativo === "activo"
 
-                                                ?
+                        ?
 
-                                                "Activo"
+                        "Activo"
 
-                                                :
+                        :
 
-                                                "Inactivo"
-
-                                        }
-
-
-                                    </span>
-
-
-
-
-                                </div>
-
-
-
-                            </button>
-
-
-                        )
-
-
-                    })
-
-
-                }
-
-
-
-            </div>
-
-
-
-        </div>
-
-
-    )
-
-
+                        "Inactivo"
+                    }
+                  </span>
+                </div>
+              </button>
+            )
+          })
+        }
+      </div>
+    </div>
+  )
 }

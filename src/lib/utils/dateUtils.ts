@@ -12,26 +12,28 @@ export const calcularFechasVisibles = (fechaRefStr: string, vista: 'semana' | 'm
     let fechaFin: Date;
 
     if (vista === 'semana') {
-        // Lunes de esta semana
-        const day = refDate.getDay();
-        const diff = refDate.getDate() - day + (day === 0 ? -6 : 1);
-        fechaInicio = new Date(refDate.setDate(diff));
-        fechaFin = new Date(fechaInicio);
-        fechaFin.setDate(fechaInicio.getDate() + 4); // Viernes
-    } else {
-        // Todo el mes
-        fechaInicio = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
-        fechaFin = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0);
-    }
-
-    // Generar iteración excluyendo fines de semana
-    let actual = new Date(fechaInicio);
-    while (actual <= fechaFin) {
-        const diaSemana = actual.getDay();
-        if (diaSemana !== 0 && diaSemana !== 6) { // 0 = Dom, 6 = Sab
-            fechas.push(new Date(actual));
+        // 5 días hábiles empezando en la fecha pivote, avanzando siempre hacia adelante
+        // y saltando sábado/domingo sin retroceder nunca al día clickeado.
+        let actual = new Date(refDate);
+        while (fechas.length < 5) {
+            const diaSemana = actual.getDay();
+            if (diaSemana !== 0 && diaSemana !== 6) {
+                fechas.push(new Date(actual));
+            }
+            actual.setDate(actual.getDate() + 1);
         }
-        actual.setDate(actual.getDate() + 1);
+    } else {
+        // Todo el mes, excluyendo fines de semana
+        const fechaInicio = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
+        const fechaFin = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0);
+        let actual = new Date(fechaInicio);
+        while (actual <= fechaFin) {
+            const diaSemana = actual.getDay();
+            if (diaSemana !== 0 && diaSemana !== 6) {
+                fechas.push(new Date(actual));
+            }
+            actual.setDate(actual.getDate() + 1);
+        }
     }
 
     return {
