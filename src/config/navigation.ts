@@ -27,9 +27,6 @@ export const navItems = [
     { name: "Solicitudes", path: "/admin/solicitudes", roles: ["admin"], icon: Inbox },
     { name: "Laboratorios", path: "/admin/laboratorios", roles: ["admin"], icon: FlaskConical },
     { name: "Reportes", path: "/admin/reportes", roles: ["admin"], icon: BarChart3 },
-    { name: "Auditoría", path: "/admin/auditoria", roles: ["admin"], icon: ShieldCheck },
+    { name: "Historial", path: "/admin/auditoria", roles: ["admin"], icon: ShieldCheck },
     { name: "Asistencia", path: "/admin/asistencia", roles: ["admin"], icon: UserCheck },
-
-    // Configuración compartida
-    { name: "Configuración", path: "/configuracion", roles: ["admin", "docente"], icon: Settings },
 ];

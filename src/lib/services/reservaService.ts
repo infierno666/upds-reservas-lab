@@ -390,3 +390,76 @@ export const confirmarAsistencia = async (
     });
     if (error) throw new Error(error.message);
 };
+
+// =========================================================================
+// 6. CALENDARIO
+// =========================================================================
+
+export const getCalendarioReservas = async (
+    inicio: string,
+    fin: string,
+    laboratorioId?: string
+) => {
+    const supabase = createClient();
+
+    let query = supabase
+        .from("reservas")
+        .select(
+            `
+            id,
+            fecha,
+            estado,
+            laboratorio_id,
+
+            laboratorios(
+                nombre
+            ),
+
+            materias(
+                nombre
+            ),
+
+            bloques_horarios(
+                hora_inicio,
+                hora_fin,
+                turno
+            )
+
+        `
+        )
+        .gte("fecha", inicio)
+        .lte("fecha", fin);
+
+    if (laboratorioId) {
+        query = query.eq("laboratorio_id", laboratorioId);
+    }
+
+    const { data, error } = await query.order("fecha", {
+        ascending: true,
+    });
+
+    if (error) throw new Error(error.message);
+
+    return (
+        data?.map((reserva: any) => ({
+            id: reserva.id,
+
+            title: `${reserva.laboratorios?.nombre ?? "Laboratorio"}
+            - ${reserva.materias?.nombre ?? "Reserva"}`,
+
+            start: `${reserva.fecha}T${reserva.bloques_horarios.hora_inicio}`,
+
+            end: `${reserva.fecha}T${reserva.bloques_horarios.hora_fin}`,
+
+            extendedProps: {
+                estado: reserva.estado,
+
+                laboratorio: reserva.laboratorios?.nombre,
+
+                materia: reserva.materias?.nombre,
+
+                turno: reserva.bloques_horarios?.turno,
+            },
+        })) || []
+    );
+};

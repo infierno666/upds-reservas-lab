@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SolicitudGrupo, ReservaIndividual, TramiteProcesado } from "@/lib/services/admin.service";
-import { AvailabilityCheck } from "./AvailabilityCheck";
+import {
+    SolicitudGrupo,
+    TramiteProcesado
+} from "@/lib/services/admin.service";
 import { ModalEdicionFechas } from "./ModalEdicionFechas";
 import { Check, X, Calendar, Clock, Edit3, AlertTriangle, Info } from "lucide-react";
 
@@ -16,9 +18,12 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
 
     // ========================================================================
     // 1. ESTADO "BORRADOR" (Local)
+    // Copia editable de la solicitud: el admin puede tocar la materia y las
+    // fechas activas sin afectar los datos originales hasta que confirme el
+    // trámite (handleConfirmarAccion). El laboratorio ya NO es editable por
+    // el admin, se mantiene fijo al que eligió el docente.
     // ========================================================================
     const [borrador, setBorrador] = useState({
-        laboratorio_nombre: solicitud.laboratorio_nombre,
         materia_actividad: solicitud.materia_actividad,
         reservas_activas: solicitud.reservas
     });
@@ -26,7 +31,6 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
     // Sincronizar el borrador cada vez que el admin selecciona un trámite diferente
     useEffect(() => {
         setBorrador({
-            laboratorio_nombre: solicitud.laboratorio_nombre,
             materia_actividad: solicitud.materia_actividad,
             reservas_activas: solicitud.reservas
         });
@@ -34,38 +38,41 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
         setShowEditorFechas(false);
     }, [solicitud]);
 
-    // Detectar si el admin hizo cambios locales
+    // Detectar si el admin hizo cambios locales (para mostrar el banner de aviso)
     const hayCambiosLocales =
-        borrador.laboratorio_nombre !== solicitud.laboratorio_nombre ||
         borrador.materia_actividad !== solicitud.materia_actividad ||
         borrador.reservas_activas.length !== solicitud.reservas.length;
 
     // ========================================================================
     // 2. ESTADOS DE UI (Modales y Popups)
     // ========================================================================
-    const [popupActivo, setPopupActivo] = useState<'aprobada' | 'rechazada' | null>(null);
+    const [popupActivo, setPopupActivo] = useState<"aprobada" | "rechazada" | null>(null);
     const [showEditorFechas, setShowEditorFechas] = useState(false);
     const [motivo, setMotivo] = useState("");
 
     // FASE 4: EL CONSTRUCTOR DEL PAQUETE FINAL
     const handleConfirmarAccion = () => {
-        if (popupActivo === 'rechazada' && !motivo.trim()) return;
+        if (popupActivo === "rechazada" && !motivo.trim()) return;
 
         // Construimos los arreglos de IDs
-        const aprobadosIds = popupActivo === 'aprobada'
+        const aprobadosIds = popupActivo === "aprobada"
             ? borrador.reservas_activas.map(r => r.id)
             : []; // Si rechaza todo, aprobados está vacío
 
-        const rechazadosIds = popupActivo === 'rechazada'
+        const rechazadosIds = popupActivo === "rechazada"
             ? solicitud.reservas.map(r => r.id) // Si rechaza todo, van todos los IDs originales
-            : solicitud.reservas.filter(r => !borrador.reservas_activas.find(b => b.id === r.id)).map(r => r.id); // Si aprueba, los que faltan en el borrador son los rechazados
+            : solicitud.reservas
+                .filter(r => !borrador.reservas_activas.find(b => b.id === r.id))
+                .map(r => r.id); // Si aprueba, los que faltan en el borrador son los rechazados
 
         const tramiteFinal: TramiteProcesado = {
             aprobadosIds,
             rechazadosIds,
             motivoRechazo: motivo,
             nuevaMateria: borrador.materia_actividad,
-            nuevoLaboratorioNombre: borrador.laboratorio_nombre
+            // El laboratorio ya no se reasigna: siempre va el original de la solicitud
+            nuevoLaboratorioId: solicitud.laboratorio_id,
+            nuevoLaboratorioNombre: solicitud.laboratorio_nombre
         };
 
         onProcesarTramite(tramiteFinal);
@@ -81,7 +88,7 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                     <div>
                         <h4 className="text-sm font-bold text-blue-800">Modo Edición Activo</h4>
                         <p className="text-xs font-medium text-blue-600 mt-1">
-                            Has realizado cambios en el laboratorio o materia. Estos cambios solo se guardarán al confirmar la aprobación del trámite.
+                            Has realizado cambios en la materia o las fechas. Estos cambios solo se guardarán al confirmar la aprobación del trámite.
                         </p>
                     </div>
                 </div>
@@ -98,22 +105,16 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                     </span>
                 </div>
 
-                {/* EDITOR DE LABORATORIO (Borrador) */}
+                {/* LABORATORIO ASIGNADO — fijo, ya no editable por el admin.
+                    Antes había aquí un <select> con reasignación de laboratorio
+                    (incluía un bug de <select> anidado); se quitó por completo. */}
                 <div className="mt-4">
                     <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">
                         Laboratorio Asignado
                     </label>
-                    <select
-                        value={borrador.laboratorio_nombre}
-                        onChange={(e) => setBorrador({ ...borrador, laboratorio_nombre: e.target.value })}
-                        className={`w-full max-w-md text-2xl font-black text-slate-800 bg-transparent border-b-2 outline-none transition-colors ${hayCambiosLocales ? 'border-[#004B87] bg-blue-50/30' : 'border-transparent hover:border-slate-200 focus:border-[#004B87]'}`}
-                    >
-                        {/* En un caso real, esto se mapearía desde la base de datos */}
-                        <option value={solicitud.laboratorio_nombre}>{solicitud.laboratorio_nombre} (Original)</option>
-                        <option value="Laboratorio Cisco">Laboratorio Cisco</option>
-                        <option value="Laboratorio Mac">Laboratorio Mac</option>
-                        <option value="Laboratorio Redes">Laboratorio Redes</option>
-                    </select>
+                    <p className="text-2xl font-black text-slate-800">
+                        {solicitud.laboratorio_nombre}
+                    </p>
                 </div>
             </div>
 
@@ -133,7 +134,7 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                         type="text"
                         value={borrador.materia_actividad}
                         onChange={(e) => setBorrador({ ...borrador, materia_actividad: e.target.value })}
-                        className={`w-full text-base font-bold text-slate-700 bg-transparent border-b outline-none transition-colors ${borrador.materia_actividad !== solicitud.materia_actividad ? 'border-[#004B87]' : 'border-transparent focus:border-slate-300'}`}
+                        className={`w-full text-base font-bold text-slate-700 bg-transparent border-b outline-none transition-colors ${borrador.materia_actividad !== solicitud.materia_actividad ? "border-[#004B87]" : "border-transparent focus:border-slate-300"}`}
                     />
                 </div>
             </div>
@@ -161,14 +162,6 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                 </div>
             </div>
 
-            {/* ANÁLISIS DE DISPONIBILIDAD */}
-            {/* Pasamos el nombre del laboratorio del borrador para que revalúe si se cambia */}
-            <AvailabilityCheck
-                reservas={solicitud.reservas}
-                nombreLaboratorio={borrador.laboratorio_nombre}
-                conflictosIds={[]} // Fase 4
-            />
-
             {/* BOTONES DE ACCIÓN MASIVA */}
             <div className="pt-6 border-t border-slate-100 flex flex-wrap gap-4">
                 <button
@@ -180,7 +173,7 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                 </button>
                 <button
                     onClick={() => {
-                        setPopupActivo('rechazada');
+                        setPopupActivo("rechazada");
                         setMotivo(""); // Limpiar motivo al abrir
                     }}
                     disabled={isProcessing}
@@ -190,7 +183,7 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                 </button>
                 <button
                     onClick={() => {
-                        setPopupActivo('aprobada');
+                        setPopupActivo("aprobada");
                         // Si hay rechazados implícitos (por la edición de la grilla), requerimos motivo obligatoriamente
                         if (borrador.reservas_activas.length < solicitud.reservas.length) {
                             setMotivo("Bloques no disponibles por mantenimiento/conflicto de horarios.");
@@ -208,7 +201,7 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
                         <div className="p-8">
-                            {popupActivo === 'aprobada' ? (
+                            {popupActivo === "aprobada" ? (
                                 <>
                                     <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
                                         <Check size={32} strokeWidth={2.5} />
@@ -251,7 +244,7 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                                 </>
                             ) : (
                                 <>
-                                    {/* UI DEL RECHAZO TOTAL (Idéntico a fases anteriores) */}
+                                    {/* UI DEL RECHAZO TOTAL */}
                                     <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
                                         <AlertTriangle size={32} strokeWidth={2.5} />
                                     </div>
@@ -282,10 +275,10 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                                 </button>
                                 <button
                                     onClick={handleConfirmarAccion}
-                                    disabled={isProcessing || (popupActivo === 'rechazada' && !motivo.trim()) || (popupActivo === 'aprobada' && borrador.reservas_activas.length < solicitud.reservas.length && !motivo.trim())}
-                                    className={`px-6 py-2.5 text-sm font-black uppercase tracking-wider text-white rounded-xl transition-all shadow-md disabled:opacity-50 disabled:shadow-none ${popupActivo === 'aprobada'
-                                        ? 'bg-[#004B87] hover:bg-[#003865] shadow-[#004B87]/20'
-                                        : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
+                                    disabled={isProcessing || (popupActivo === "rechazada" && !motivo.trim()) || (popupActivo === "aprobada" && borrador.reservas_activas.length < solicitud.reservas.length && !motivo.trim())}
+                                    className={`px-6 py-2.5 text-sm font-black uppercase tracking-wider text-white rounded-xl transition-all shadow-md disabled:opacity-50 disabled:shadow-none ${popupActivo === "aprobada"
+                                        ? "bg-[#004B87] hover:bg-[#003865] shadow-[#004B87]/20"
+                                        : "bg-red-600 hover:bg-red-700 shadow-red-600/20"
                                         }`}
                                 >
                                     {isProcessing ? "Procesando..." : "Confirmar Orden"}
@@ -296,16 +289,14 @@ export function SolicitudDetail({ solicitud, onProcesarTramite, isProcessing = f
                 </div>
             )}
 
-            {/* ====================================================== */}
-            {/* INVOCACIÓN DEL NUEVO MODAL DE EDICIÓN CON GRILLA */}
-            {/* ====================================================== */}
+            {/* MODAL DE EDICIÓN CON GRILLA */}
             {showEditorFechas && (
                 <ModalEdicionFechas
                     reservasOriginales={solicitud.reservas} // Le pasamos todas para que arme la grilla
                     reservasActivas={borrador.reservas_activas} // Le pasamos las activas para marcarlas
                     onCancel={() => setShowEditorFechas(false)}
                     onSave={(nuevasReservasActivas) => {
-                        // AQUÍ ES LA MAGIA: Actualizamos el borrador local y cerramos el modal
+                        // Actualizamos el borrador local y cerramos el modal
                         setBorrador({ ...borrador, reservas_activas: nuevasReservasActivas });
                         setShowEditorFechas(false);
                     }}

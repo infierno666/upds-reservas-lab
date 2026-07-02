@@ -1,49 +1,113 @@
 "use client";
 
-import { Info, AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
+
 import { ReservaIndividual } from "@/lib/services/admin.service";
+
+interface Conflicto {
+    fecha: string;
+
+    bloque_horario_id: number;
+}
 
 interface Props {
     reservas: ReservaIndividual[];
+
     nombreLaboratorio: string;
-    // En un caso real, esto vendría validado desde el backend.
-    // Aquí simularemos que podemos recibir un array de IDs conflictivos.
-    conflictosIds?: string[];
+
+    disponible: boolean;
+
+    conflictos: Conflicto[];
 }
 
-export function AvailabilityCheck({ reservas, nombreLaboratorio, conflictosIds = [] }: Props) {
+export function AvailabilityCheck({
+    reservas,
+
+    nombreLaboratorio,
+
+    disponible,
+
+    conflictos,
+}: Props) {
     const total = reservas.length;
-    const conConflicto = conflictosIds.length;
-    const isTotalmenteLibre = conConflicto === 0;
 
     return (
-        <div className={`p-5 rounded-xl border flex gap-4 items-start transition-colors ${isTotalmenteLibre
-                ? 'bg-emerald-50/50 border-emerald-200'
-                : 'bg-amber-50/50 border-amber-200'
-            }`}>
-            {isTotalmenteLibre ? (
-                <CheckCircle size={24} className="mt-0.5 shrink-0 text-emerald-600" />
+        <div
+            className={`
+    p-5 rounded-xl border flex gap-4 items-start
+
+    ${disponible
+                    ? "bg-emerald-50/50 border-emerald-200"
+                    : "bg-amber-50/50 border-amber-200"
+                }
+
+    `}
+        >
+            {disponible ? (
+                <CheckCircle size={24} className="text-emerald-600 mt-0.5" />
             ) : (
-                <AlertTriangle size={24} className="mt-0.5 shrink-0 text-amber-500" />
+                <AlertTriangle size={24} className="text-amber-500 mt-0.5" />
             )}
 
             <div className="flex-1">
-                <h4 className={`font-bold text-base mb-1 ${isTotalmenteLibre ? 'text-emerald-800' : 'text-amber-800'}`}>
+                <h4
+                    className={`
+            font-bold text-base mb-1
+
+            ${disponible ? "text-emerald-800" : "text-amber-800"}
+
+            `}
+                >
                     Análisis de Disponibilidad
                 </h4>
 
-                {isTotalmenteLibre ? (
-                    <p className="text-sm text-emerald-700/80 leading-relaxed font-medium">
-                        Los <strong>{total} bloques</strong> solicitados para el <strong>{nombreLaboratorio}</strong> se encuentran totalmente libres. No hay cruces de horarios ni mantenimientos programados.
+                {disponible ? (
+                    <p
+                        className="
+            text-sm
+            text-emerald-700/80
+            font-medium
+            "
+                    >
+                        Los
+                        <strong> {total} bloques</strong>
+                        solicitados para
+                        <strong> {nombreLaboratorio}</strong>
+                        están libres.
                     </p>
                 ) : (
-                    <div className="space-y-2">
-                        <p className="text-sm text-amber-800/80 leading-relaxed font-medium">
-                            ¡Atención! Se detectaron conflictos en <strong>{conConflicto} de los {total} bloques</strong> solicitados para el {nombreLaboratorio}.
+                    <div className="space-y-3">
+                        <p
+                            className="
+            text-sm
+            text-amber-800
+            font-medium
+            "
+                        >
+                            Se detectaron conflictos para:
                         </p>
-                        <p className="text-xs text-amber-700 font-semibold bg-amber-100/50 inline-block px-2 py-1 rounded-md border border-amber-200">
-                            Recomendación: Usa la "Aprobación Parcial" para descartar los días ocupados.
-                        </p>
+
+                        <div className="space-y-2">
+                            {conflictos.map((c, index) => (
+                                <div
+                                    key={index}
+                                    className="
+            flex items-center gap-2
+            bg-amber-100
+            px-3
+            py-2
+            rounded-lg
+            text-xs
+            font-bold
+            "
+                                >
+                                    <Clock size={14} />
+                                    Fecha:
+                                    {c.fecha}| Bloque:
+                                    {c.bloque_horario_id}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
