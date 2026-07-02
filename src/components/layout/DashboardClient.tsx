@@ -44,7 +44,7 @@ function DashboardLayoutWrapper({ children, role, userEmail }: Props) {
                 {/* ========================================== */}
                 {/* HEADER SUPERIOR CON LOGO OFICIAL */}
                 {/* ========================================== */}
-               <header className="
+                <header className="
     flex 
     h-16 
     shrink-0 
@@ -63,10 +63,10 @@ function DashboardLayoutWrapper({ children, role, userEmail }: Props) {
 ">
 
 
-    {/* Trigger Desktop */}
+                    {/* Trigger Desktop */}
 
-    <SidebarTrigger
-        className="
+                    <SidebarTrigger
+                        className="
         hidden 
         md:inline-flex 
         p-2.5 
@@ -76,15 +76,15 @@ function DashboardLayoutWrapper({ children, role, userEmail }: Props) {
         hover:text-[#004B87] 
         transition-all
         "
-    />
+                    />
 
 
 
-    {/* Trigger Mobile */}
+                    {/* Trigger Mobile */}
 
-    <button
-        onClick={() => setOpenMobile(!openMobile)}
-        className="
+                    <button
+                        onClick={() => setOpenMobile(!openMobile)}
+                        className="
         inline-flex 
         md:hidden 
         p-2.5 
@@ -97,29 +97,29 @@ function DashboardLayoutWrapper({ children, role, userEmail }: Props) {
         focus:ring-2 
         focus:ring-[#004B87]/20
         "
-    >
+                    >
 
-        {openMobile 
-            ? <X size={22}/> 
-            : <Menu size={22}/>
-        }
+                        {openMobile
+                            ? <X size={22} />
+                            : <Menu size={22} />
+                        }
 
-    </button>
-
-
+                    </button>
 
 
 
-    {/* Branding Logo */}
 
-    <div className="
+
+                    {/* Branding Logo */}
+
+                    <div className="
         flex 
         items-center 
         pl-1 
         md:pl-3
     ">
 
-        <div className="
+                        <div className="
             relative 
             w-[150px] 
             h-[40px] 
@@ -127,41 +127,41 @@ function DashboardLayoutWrapper({ children, role, userEmail }: Props) {
             md:h-[60px]
         ">
 
-            <Image
-                src="/logo-LARGO.png"
-                alt="Logo UPDS"
-                fill
-                className="
+                            <Image
+                                src="/logo-LARGO.png"
+                                alt="Logo UPDS"
+                                fill
+                                className="
                 object-contain 
                 object-left
                 "
-                priority
-            />
+                                priority
+                            />
 
-        </div>
+                        </div>
 
-    </div>
-
-
+                    </div>
 
 
-    {/* DERECHA HEADER */}
-
-    <div className="ml-auto flex items-center gap-3">
 
 
-        {/* Notificaciones SOLO DOCENTE */}
+                    {/* DERECHA HEADER */}
 
-        {role === "docente" && (
-
-            <NotificacionesBell />
-
-        )}
-
-    </div>
+                    <div className="ml-auto flex items-center gap-3">
 
 
-</header>
+                        {/* Notificaciones SOLO DOCENTE */}
+
+                        {role === "docente" && (
+
+                            <NotificacionesBell />
+
+                        )}
+
+                    </div>
+
+
+                </header>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
                     <main className="flex flex-col w-full h-full min-h-full p-4 md:p-6 lg:p-8 transition-all duration-300">

@@ -305,7 +305,7 @@ ${fin.toLocaleDateString(
 
 
             {/* Cabecera Superior: Tabs de Turnos y Botón Maestro */}
-            <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-50 p-4 border-b border-slate-200 gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-50 p-2.5 sm:p-3 lg:p-4 border-b border-slate-200 gap-2.5 sm:gap-3 lg:gap-4">
 
                 {/* Selector de Turnos (Tabs) */}
                 <div className="flex p-1 bg-slate-200/60 rounded-xl overflow-x-auto w-full sm:w-auto">
@@ -317,13 +317,13 @@ ${fin.toLocaleDateString(
                             <button
                                 key={turno.id}
                                 onClick={() => setActiveShift(turno.id)}
-                                className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isActive
+                                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${isActive
                                     ? 'bg-white text-blue-700 shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                                     }`}
                             >
                                 <Icon size={16} className={isActive ? "text-blue-600" : ""} />
-                                {turno.label}
+                                <span className="hidden sm:inline">{turno.label}</span>
                             </button>
                         );
                     })}
@@ -333,13 +333,13 @@ ${fin.toLocaleDateString(
                 <button
                     onClick={handleMasterToggle}
                     disabled={libresDelTurno.length === 0}
-                    className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all w-full sm:w-auto ${isAllSelected
+                    className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all w-full sm:w-auto ${isAllSelected
                         ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                         : 'bg-[#001D4A] text-white hover:bg-[#001D4A]/90 shadow-md'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                     {isAllSelected ? <Square size={16} /> : <CheckSquare size={16} />}
-                    {isAllSelected ? `Limpiar Turno ${activeShift}` : `Seleccionar Todo (${activeShift})`}
+                    <span className="truncate">{isAllSelected ? `Limpiar Turno ${activeShift}` : `Seleccionar Todo (${activeShift})`}</span>
                 </button>
             </div>
             <div className="flex justify-center">
@@ -349,18 +349,18 @@ ${fin.toLocaleDateString(
             </div>
             {/* Grilla Principal */}
             <div className="flex-1 overflow-x-auto custom-scrollbar">
-                <table className="w-full min-w-[800px] border-collapse">
+                <table className="w-full min-w-[650px] sm:min-w-[800px] border-collapse">
                     <thead>
                         <tr>
-                            <th className="p-4 border-b border-r border-slate-100 bg-white sticky left-0 z-20 w-32 shadow-[1px_0_0_0_#f1f5f9]">
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Horario</span>
+                            <th className="p-2.5 sm:p-3 lg:p-4 border-b border-r border-slate-100 bg-white sticky left-0 z-20 w-24 sm:w-28 lg:w-32 shadow-[1px_0_0_0_#f1f5f9]">
+                                <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Horario</span>
                             </th>
                             {fechasVisibles.map((fecha, idx) => (
-                                <th key={idx} className="p-3 border-b border-slate-100 bg-slate-50/50 min-w-[120px]">
+                                <th key={idx} className="p-2 sm:p-2.5 lg:p-3 border-b border-slate-100 bg-slate-50/50 min-w-[90px] sm:min-w-[105px] lg:min-w-[120px]">
                                     <div className="flex flex-col items-center">
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{fecha.toLocaleDateString('es-ES', { weekday: 'long' })}</span>
-                                        <span className="text-lg font-black text-slate-800 leading-tight">{fecha.getDate()}</span>
-                                        <span className="text-[10px] text-slate-400 font-medium">{fecha.toLocaleDateString('es-ES', { month: 'short' })}</span>
+                                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest">{fecha.toLocaleDateString('es-ES', { weekday: 'long' })}</span>
+                                        <span className="text-base sm:text-lg font-black text-slate-800 leading-tight">{fecha.getDate()}</span>
+                                        <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium">{fecha.toLocaleDateString('es-ES', { month: 'short' })}</span>
                                     </div>
                                 </th>
                             ))}
@@ -369,13 +369,13 @@ ${fin.toLocaleDateString(
                     <tbody className="bg-slate-50/20">
                         {bloquesDelTurno.map((bloque) => (
                             <tr key={bloque.id} className="group">
-                                <td className="p-4 border-b border-r border-slate-100 sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#f1f5f9] group-hover:bg-slate-50/80 transition-colors">
+                                <td className="p-2.5 sm:p-3 lg:p-4 border-b border-r border-slate-100 sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#f1f5f9] group-hover:bg-slate-50/80 transition-colors">
                                     <div className="flex flex-col items-center justify-center">
-                                        <span className="text-xs font-bold text-slate-700">
+                                        <span className="text-[11px] sm:text-xs font-bold text-slate-700">
                                             {bloque?.hora_inicio?.slice(0, 5)}
                                         </span>
-                                        <span className="text-[10px] text-slate-400 font-medium pb-0.5">a</span>
-                                        <span className="text-xs font-bold text-slate-700">
+                                        <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium pb-0.5">a</span>
+                                        <span className="text-[11px] sm:text-xs font-bold text-slate-700">
                                             {bloque?.hora_fin?.slice(0, 5)}
                                         </span>
                                     </div>
@@ -387,14 +387,14 @@ ${fin.toLocaleDateString(
                                     const isInteractable = infoCelda.label === 'Libre' || infoCelda.label === 'Seleccionado';
 
                                     return (
-                                        <td key={`${fIdx}-${bloque.id}`} className="p-2 border-b border-slate-100">
+                                        <td key={`${fIdx}-${bloque.id}`} className="p-1.5 sm:p-2 border-b border-slate-100">
                                             <button
                                                 type="button"
                                                 disabled={!isInteractable}
                                                 onClick={() => onToggleCelda(fechaStr, bloque.id)}
-                                                className={`w-full h-16 rounded-xl border flex flex-col items-center justify-center transition-all duration-200 ${infoCelda.clase}`}
+                                                className={`w-full h-12 sm:h-14 lg:h-16 rounded-xl border flex flex-col items-center justify-center transition-all duration-200 ${infoCelda.clase}`}
                                             >
-                                                <span className="text-[11px] font-bold tracking-wide uppercase">
+                                                <span className="text-[10px] sm:text-[11px] font-bold tracking-wide uppercase">
                                                     {infoCelda.label}
                                                 </span>
                                             </button>

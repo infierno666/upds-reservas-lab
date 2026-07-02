@@ -272,99 +272,131 @@ export default function NuevaReservaPage() {
         <div className="w-full h-full min-h-[calc(100vh-100px)] max-w-[95%] xl:max-w-[1800px] mx-auto flex flex-col pb-6 animate-in fade-in duration-500">
 
             <CustomModal
-                isOpen={modalConfig.isOpen} type={modalConfig.type} title={modalConfig.title} message={modalConfig.message}
-                onConfirm={modalConfig.onConfirm} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                onConfirm={modalConfig.onConfirm}
+                onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
             />
 
             {/* Cabecera Dinámica (Cambia si es Nueva o Edición) */}
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
-                <div>
-                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                        {isEditMode ? <Edit3 className="text-blue-600" size={36} /> : <CalendarCheck className="text-[#001D4A]" size={36} />}
-                        {isEditMode ? 'Editor de Reservas' : 'Planificador de Espacios'}
+            <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
+                <div className="space-y-1">
+                    <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        {isEditMode ? <Edit3 className="text-blue-600 shrink-0" size={32} /> : <CalendarCheck className="text-[#001D4A] shrink-0" size={32} />}
+                        <span className="truncate">{isEditMode ? 'Editor de Reservas' : 'Planificador de Espacios'}</span>
                     </h2>
-                    <p className="text-slate-500 font-medium mt-1">
+                    <p className="text-sm sm:text-base text-slate-500 font-medium leading-relaxed max-w-2xl">
                         {isEditMode ? `Modificando la solicitud ${editGrupoId?.split('-')[0]}` : 'Gestione la ocupación y asigne bloques masivos por rangos de tiempo.'}
                     </p>
                 </div>
 
-                <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-sm">
-                    <button onClick={() => setVista('semana')} className={`flex items-center justify-center gap-2 flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'semana' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>
-                        <CalendarDays size={16} /> Semana
+                {/* Selector de vista tipo Tabs - Responsivo al 100% */}
+                <div className="flex w-full md:w-auto bg-slate-100 p-1.5 rounded-xl border border-slate-200/80 shadow-sm shrink-0">
+                    <button
+                        onClick={() => setVista('semana')}
+                        className={`flex items-center justify-center gap-2 flex-1 md:flex-none px-5 py-2 text-sm rounded-lg font-bold transition-all duration-200 ${vista === 'semana' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
+                    >
+                        <CalendarDays size={16} />
+                        <span>Semana</span>
                     </button>
-                    <button onClick={() => setVista('mes')} className={`flex items-center justify-center gap-2 flex-1 sm:flex-none px-6 py-2.5 text-sm rounded-lg font-bold transition-all ${vista === 'mes' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-700'}`}>
-                        <CalendarRange size={16} /> Mes
+                    <button
+                        onClick={() => setVista('mes')}
+                        className={`flex items-center justify-center gap-2 flex-1 md:flex-none px-5 py-2 text-sm rounded-lg font-bold transition-all duration-200 ${vista === 'mes' ? 'bg-white shadow-sm text-[#001D4A]' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
+                    >
+                        <CalendarRange size={16} />
+                        <span>Mes</span>
                     </button>
                 </div>
             </div>
 
-            <div className="flex flex-col xl:flex-row gap-6 flex-1 min-h-[600px]">
-                {/* Panel de Parámetros Lateral */}
-                <div className="w-full xl:w-[380px] shrink-0 flex flex-col gap-5 h-full">
-                    <ReservaSidebarConfig
-                        laboratorios={laboratorios}
-                        materias={materias}
-                        labSeleccionado={labSeleccionado} setLabSeleccionado={setLabSeleccionado}
-                        materiaIdSeleccionada={materiaIdSeleccionada} setMateriaIdSeleccionada={setMateriaIdSeleccionada}
-                        periodoModulo={periodoModulo} setPeriodoModulo={setPeriodoModulo}
-                        periodoAnio={periodoAnio} setPeriodoAnio={setPeriodoAnio}
-                        fechaPivote={fechaPivote} setFechaPivote={setFechaPivote}
-                        cantidadSeleccionada={seleccion.length}
-                        onLimpiarSeleccion={() => setSeleccion([])} // Limpieza Global
-                    />
+            {/* Contenedor Principal Ajustado para pantallas grandes y móviles */}
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 flex-1 min-h-[500px] lg:h-[calc(100vh-240px)] items-stretch">
 
-                    <button
-                        onClick={solicitarConfirmacion}
-                        disabled={seleccion.length === 0 || !materiaIdSeleccionada || isSubmitting}
-                        className={`w-full text-white font-black py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl flex justify-center items-center gap-3 text-lg ${isEditMode ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-[#001D4A] hover:bg-[#001D4A]/90 shadow-[#001D4A]/20'}`}
-                    >
-                        {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : (isEditMode ? <Edit3 size={24} /> : <CalendarCheck size={24} />)}
-                        {isSubmitting ? "Procesando..." : (isEditMode ? "Guardar Modificaciones" : "Procesar Reservas")}
-                    </button>
+                {/* Panel de Parámetros Lateral */}
+                <div className="w-full lg:w-[300px] xl:w-[380px] shrink-0 flex flex-col gap-4 h-auto lg:h-full justify-between">
+                    {/* Contenedor del Sidebar con scroll interno en escritorio */}
+                    <div className="flex-1 min-h-0 lg:overflow-y-auto pr-0 lg:pr-1 custom-scrollbar">
+                        <ReservaSidebarConfig
+                            laboratorios={laboratorios}
+                            materias={materias}
+                            labSeleccionado={labSeleccionado} setLabSeleccionado={setLabSeleccionado}
+                            materiaIdSeleccionada={materiaIdSeleccionada} setMateriaIdSeleccionada={setMateriaIdSeleccionada}
+                            periodoModulo={periodoModulo} setPeriodoModulo={setPeriodoModulo}
+                            periodoAnio={periodoAnio} setPeriodoAnio={setPeriodoAnio}
+                            fechaPivote={fechaPivote} setFechaPivote={setFechaPivote}
+                            cantidadSeleccionada={seleccion.length}
+                            onLimpiarSeleccion={() => setSeleccion([])}
+                        />
+                    </div>
+
+                    {/* Botón de acción principal fijo abajo */}
+                    <div className="pt-2 lg:pt-0 shrink-0">
+                        <button
+                            onClick={solicitarConfirmacion}
+                            disabled={seleccion.length === 0 || !materiaIdSeleccionada || isSubmitting}
+                            className={`w-full text-white font-black py-4 px-6 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all active:scale-[0.98] shadow-lg flex justify-center items-center gap-3 text-base sm:text-lg tracking-wide ${isEditMode ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/10' : 'bg-[#001D4A] hover:bg-[#001D4A]/95 shadow-[#001D4A]/10'}`}
+                        >
+                            {isSubmitting ? <Loader2 size={22} className="animate-spin" /> : (isEditMode ? <Edit3 size={22} /> : <CalendarCheck size={22} />)}
+                            <span>{isSubmitting ? "Procesando..." : (isEditMode ? "Guardar Modificaciones" : "Procesar Reservas")}</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Grilla Interactiva */}
-                <div className="flex-1 min-w-0 bg-white rounded-3xl flex flex-col h-full shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-4 border-b border-slate-200 bg-slate-50/70">
+                <div className="flex-1 min-w-0 bg-white rounded-3xl flex flex-col h-full shadow-sm border border-slate-200/80 overflow-hidden">
+                    {/* Navegador superior de la grilla */}
+                    <div className="p-4 border-b border-slate-200 bg-slate-50/80 shrink-0">
                         <CalendarNavigator fechaPivote={fechaPivote} vista={vista} setFechaPivote={setFechaPivote} />
                     </div>
 
-                    <div className="flex-1 min-h-0">
+                    {/* Contenedor del contenido dinámico */}
+                    <div className="flex-1 min-h-0 w-full flex flex-col h-full bg-slate-50/30">
                         {!labSeleccionado ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-5 p-8 bg-slate-50/50">
-                                <div className="w-24 h-24 bg-white shadow-md rounded-full flex items-center justify-center border border-slate-100">
-                                    <MapPin size={40} className="text-slate-300" />
+                            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-5 p-8 min-h-[350px]">
+                                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white shadow-sm rounded-full flex items-center justify-center border border-slate-200/60 transition-transform duration-300 hover:scale-105">
+                                    <MapPin size={36} className="text-slate-400" />
                                 </div>
-                                <div className="text-center">
-                                    <h3 className="text-2xl font-black text-slate-700 mb-2">Sin espacio seleccionado</h3>
-                                    <p className="font-medium text-slate-500 max-w-sm">Seleccione un laboratorio en el panel izquierdo para cargar la matriz.</p>
+                                <div className="text-center max-w-sm px-4">
+                                    <h3 className="text-xl sm:text-2xl font-black text-slate-700 mb-1.5">Sin espacio seleccionado</h3>
+                                    <p className="text-sm sm:text-base font-medium text-slate-400">Seleccione un laboratorio en el panel izquierdo para cargar la matriz.</p>
                                 </div>
                             </div>
                         ) : isLoadingGrid ? (
-                            <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-slate-50/50">
-                                <Loader2 size={48} className="animate-spin text-[#001D4A]" />
-                                <p className="text-slate-500 font-bold animate-pulse">Sincronizando matriz compartida...</p>
+                            <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 min-h-[350px]">
+                                <div className="p-4 bg-white rounded-full shadow-sm border border-slate-100">
+                                    <Loader2 size={40} className="animate-spin text-[#001D4A]" />
+                                </div>
+                                <p className="text-slate-500 text-sm sm:text-base font-bold animate-pulse tracking-wide">Sincronizando matriz compartida...</p>
                             </div>
                         ) : (
-                            <ShiftGridSelector
-                                bloques={bloques}
-                                fechasVisibles={fechasVisibles}
-                                disponibilidad={disponibilidad}
-                                misReservas={misReservas}
-                                seleccion={seleccion}
-                                turnoInicial={turnoInicial}
-                                onToggleCelda={handleToggleCelda}
-                                onToggleMulti={handleToggleMulti}
-                            />
+                            /* Contenedor responsivo con scroll interno para la matriz de turnos */
+                            <div className="flex-1 min-h-0 w-full overflow-auto p-2 sm:p-3 lg:p-3 xl:p-4 custom-scrollbar">
+                                <ShiftGridSelector
+                                    bloques={bloques}
+                                    fechasVisibles={fechasVisibles}
+                                    disponibilidad={disponibilidad}
+                                    misReservas={misReservas}
+                                    seleccion={seleccion}
+                                    turnoInicial={turnoInicial}
+                                    onToggleCelda={handleToggleCelda}
+                                    onToggleMulti={handleToggleMulti}
+                                />
+                            </div>
                         )}
                     </div>
 
-                    <LaboratoryHorizontalSelector
-                        laboratorios={laboratorios}
-                        laboratorioSeleccionado={labSeleccionado}
-                        setLaboratorioSeleccionado={setLabSeleccionado}
-                    />
+                    {/* Selector Horizontal Inferior */}
+                    <div className="border-t border-slate-200 bg-white p-3 sm:p-4 shrink-0">
+                        <LaboratoryHorizontalSelector
+                            laboratorios={laboratorios}
+                            laboratorioSeleccionado={labSeleccionado}
+                            setLaboratorioSeleccionado={setLabSeleccionado}
+                        />
+                    </div>
                 </div>
+
             </div>
         </div>
     );
