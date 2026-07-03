@@ -1,9 +1,27 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import LoginForm from "@/components/auth/LoginForm";
 
 export default function LoginDesktop() {
+    // 1. Estado para controlar qué imagen se muestra
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    // 2. Array con las imágenes que quieres rotar
+    const imagenes = ["/modelo-upds.png", "/leo-modelo.png"];
+
+    // 3. Efecto para rotar cada 4 segundos
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentImageIndex((prevIndex) =>
+                prevIndex === imagenes.length - 1 ? 0 : prevIndex + 1
+            );
+        }, 4000); // 4000ms = 4 segundos (Recomendado para carruseles hero)
+
+        return () => clearInterval(interval); // Limpiamos el intervalo al desmontar
+    }, [imagenes.length]);
+
     return (
         <div className="hidden md:flex min-h-screen w-full">
 
@@ -16,16 +34,20 @@ export default function LoginDesktop() {
                 <div className="absolute top-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-upds-tertiary opacity-30 blur-[100px] pointer-events-none" />
                 <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-400 opacity-20 blur-[120px] pointer-events-none" />
 
-                {/* MODELO INSTITUCIONAL (Ancho relativo ajustado) */}
-                <div className="absolute right-0 bottom-0 w-[120%] lg:w-[70%] xl:w-[65%] max-w-[860px] lg:max-w-[420px] xl:max-w-[550px] z-10 opacity-90 pointer-events-none">
-                    <Image
-                        src="/modelo-upds.png"
-                        alt="Modelo UPDS"
-                        width={600}
-                        height={900}
-                        priority
-                        className="object-contain object-bottom drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] w-full h-auto"
-                    />
+                {/* MODELO INSTITUCIONAL (Carrusel Automático con Transición) */}
+                <div className="absolute right-0 bottom-0 w-[120%] lg:w-[70%] xl:w-[65%] max-w-[860px] lg:max-w-[420px] xl:max-w-[550px] z-10 opacity-90 pointer-events-none aspect-[2/3]">
+                    {imagenes.map((src, index) => (
+                        <Image
+                            key={src}
+                            src={src}
+                            alt={`Modelo UPDS ${index + 1}`}
+                            fill // Usamos fill para que ocupe el contenedor aspect-[2/3]
+                            sizes="(max-width: 1024px) 100vw, 50vw"
+                            priority={index === 0} // Solo la primera carga con prioridad
+                            className={`object-contain object-bottom drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-opacity duration-1000 ease-in-out ${index === currentImageIndex ? "opacity-100" : "opacity-0"
+                                }`}
+                        />
+                    ))}
                 </div>
 
                 {/* LOGO (Alturas corregidas) */}
