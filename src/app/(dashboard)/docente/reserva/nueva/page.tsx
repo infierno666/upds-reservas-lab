@@ -31,48 +31,37 @@ export default function NuevaReservaPage() {
   const turnoEditar = searchParams.get("turno");
   const vistaEditar = searchParams.get("vista");
 
-  // Parámetros de Edición
   const isEditMode = searchParams.get('edit') === 'true';
   const editGrupoId = searchParams.get('grupoId');
 
-  // Catálogos e Infraestructura
   const [laboratorios, setLaboratorios] = useState<any[]>([]);
   const [bloques, setBloques] = useState<any[]>([]);
   const [materias, setMaterias] = useState<any[]>([]);
 
-  // Estados de Control de la Grilla de Tiempo
   const [vista, setVista] = useState<'semana' | 'mes'>('semana');
   const [fechaPivote, setFechaPivote] = useState(formatearFecha(new Date()));
   const [fechasVisibles, setFechasVisibles] = useState<Date[]>([]);
   const [disponibilidad, setDisponibilidad] = useState<any[]>([]);
   const [misReservas, setMisReservas] = useState<any[]>([]);
 
-  // Estados de Carga
   const [isLoadingGrid, setIsLoadingGrid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(true);
-  const dataLoaded = useRef(false); // Ref para evitar recargas infinitas en modo edición
+  const dataLoaded = useRef(false);
   const [turnoInicial, setTurnoInicial] = useState("mañana");
 
-
-  // Configuración del Modal
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean; type: 'success' | 'error' | 'confirm'; title: string; message: string; onConfirm?: () => void;
   }>({ isOpen: false, type: 'success', title: '', message: '' });
 
-  // Estado del Formulario
   const [labSeleccionado, setLabSeleccionado] = useState("");
   const [materiaIdSeleccionada, setMateriaIdSeleccionada] = useState("");
   const [periodoModulo, setPeriodoModulo] = useState("1");
   const [periodoAnio, setPeriodoAnio] = useState(new Date().getFullYear().toString());
 
-  // ESTADOS MAESTROS DE SELECCIÓN
   const [seleccion, setSeleccion] = useState<CeldaSeleccionada[]>([]);
   const [bloquesOriginales, setBloquesOriginales] = useState<CeldaSeleccionada[]>([]);
 
-  // =========================================================================
-  // 1. CARGA DE CATÁLOGOS
-  // =========================================================================
   useEffect(() => {
     setIsLoadingCatalogs(true);
     Promise.all([getLaboratorios(), getBloquesHorarios(), getMaterias()])
@@ -86,31 +75,13 @@ export default function NuevaReservaPage() {
   }, []);
 
   useEffect(() => {
-
-    if (turnoEditar) {
-
-      setTurnoInicial(turnoEditar);
-
-    }
-
+    if (turnoEditar) setTurnoInicial(turnoEditar);
   }, [turnoEditar]);
 
   useEffect(() => {
-
-
-    if (vistaEditar) {
-
-      setVista(
-        vistaEditar as "semana" | "mes"
-      );
-
-    }
-
-
+    if (vistaEditar) setVista(vistaEditar as "semana" | "mes");
   }, [vistaEditar]);
-  // =========================================================================
-  // 2. MODO EDICIÓN: AUTO-LLENADO INICIAL
-  // =========================================================================
+
   useEffect(() => {
     if (isEditMode && editGrupoId && !dataLoaded.current && laboratorios.length > 0) {
       setLabSeleccionado(searchParams.get('lab') || "");
@@ -135,9 +106,6 @@ export default function NuevaReservaPage() {
     }
   }, [isEditMode, editGrupoId, searchParams, laboratorios]);
 
-  // =========================================================================
-  // 3. SINCRONIZACIÓN DE LA GRILLA (Con Efecto Fantasma)
-  // =========================================================================
   useEffect(() => {
     if (!labSeleccionado || !fechaPivote) return;
 
@@ -148,20 +116,14 @@ export default function NuevaReservaPage() {
         setFechasVisibles(rango.fechas);
 
         const dispo = await getDisponibilidadRango(labSeleccionado, rango.inicio, rango.fin);
-        // Asumiendo que tienes esta función, si no, puedes ignorar el mapeo de misReservas temporales
         const propias = getMisReservasRango ? await getMisReservasRango(labSeleccionado, rango.inicio, rango.fin) : [];
 
-        // MAGIA: Si estamos editando, ignoramos visualmente los bloques originales para evitar auto-colisión en la UI
         if (isEditMode && bloquesOriginales.length > 0) {
           setDisponibilidad(dispo.filter((d: any) => !bloquesOriginales.some(o => o.fecha === d.fecha && o.bloqueId === d.bloque_horario_id)));
           setMisReservas(propias.filter((p: any) => !bloquesOriginales.some(o => o.fecha === p.fecha && o.bloqueId === p.bloque_horario_id)));
         } else {
           setDisponibilidad(dispo);
-          console.log("DISPONIBILIDAD:", dispo);
-
-          console.log("MIS RESERVAS:", propias);
           setMisReservas(propias);
-
         }
       } catch (error) {
         console.error(error);
@@ -172,9 +134,6 @@ export default function NuevaReservaPage() {
     cargarGrilla();
   }, [labSeleccionado, fechaPivote, vista, isEditMode, bloquesOriginales]);
 
-  // =========================================================================
-  // 4. LÓGICA DE INTERACCIÓN GLOBAL
-  // =========================================================================
   const handleToggleCelda = (fecha: string, bloqueId: number) => {
     setSeleccion(prev => {
       const existe = prev.some(s => s.fecha === fecha && s.bloqueId === bloqueId);
@@ -195,9 +154,6 @@ export default function NuevaReservaPage() {
     });
   };
 
-  // =========================================================================
-  // 5. ENVÍO Y CONFIRMACIÓN
-  // =========================================================================
   const solicitarConfirmacion = () => {
     if (seleccion.length === 0 || !materiaIdSeleccionada) {
       setModalConfig({
@@ -234,7 +190,7 @@ export default function NuevaReservaPage() {
         setModalConfig({
           isOpen: true, type: 'success', title: '¡Modificación Exitosa!',
           message: 'La reserva ha sido actualizada correctamente en el sistema.',
-          onConfirm: () => router.push('/docente/reservas') // Regresamos al historial tras editar
+          onConfirm: () => router.push('/docente/reservas')
         });
       } else {
         await crearReservaMasiva(payload);
@@ -244,7 +200,6 @@ export default function NuevaReservaPage() {
           onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
         });
 
-        // Reseteamos UI tras crear una nueva
         setSeleccion([]);
         const rango = calcularFechasVisibles(fechaPivote, vista);
         setDisponibilidad(await getDisponibilidadRango(labSeleccionado, rango.inicio, rango.fin));
@@ -261,7 +216,7 @@ export default function NuevaReservaPage() {
 
   if (isLoadingCatalogs) {
     return (
-      <div className="flex h-[80vh] items-center justify-center flex-col gap-4">
+      <div className="flex flex-col h-[60vh] items-center justify-center gap-4">
         <Loader2 size={48} className="animate-spin text-[#001D4A]" />
         <p className="text-slate-500 font-bold tracking-tight animate-pulse">Sincronizando infraestructura...</p>
       </div>
@@ -269,7 +224,8 @@ export default function NuevaReservaPage() {
   }
 
   return (
-    <div className="w-full h-full min-h-[calc(100vh-100px)] max-w-[95%] xl:max-w-[1800px] mx-auto flex flex-col pb-6 animate-in fade-in duration-500">
+    // Removido h-full, min-h-[calc...], y pb-6. Añadido max-w-[1600px]
+    <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-5 sm:gap-6 animate-in fade-in duration-500">
 
       <CustomModal
         isOpen={modalConfig.isOpen}
@@ -280,8 +236,7 @@ export default function NuevaReservaPage() {
         onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
       />
 
-      {/* Cabecera */}
-      <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-1">
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             {isEditMode ? <Edit3 className="text-blue-600 shrink-0" size={28} /> : <CalendarCheck className="text-[#001D4A] shrink-0" size={28} />}
@@ -308,8 +263,7 @@ export default function NuevaReservaPage() {
         </div>
       </div>
 
-      {/* Paso 1: Laboratorio — ahora primero en el flujo, ya no queda al final */}
-      <div className="mb-4 shrink-0">
+      <div className="w-full">
         <LaboratoryHorizontalSelector
           laboratorios={laboratorios}
           laboratorioSeleccionado={labSeleccionado}
@@ -317,10 +271,10 @@ export default function NuevaReservaPage() {
         />
       </div>
 
-      {/* Configuración + Grilla */}
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 flex-1 min-h-[500px] items-stretch lg:items-start">
+      {/* Removido min-h-[500px] y cambiado a flex-col lg:flex-row */}
+      <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 items-start w-full">
 
-        <div className="w-full lg:w-[300px] xl:w-[340px] shrink-0 flex flex-col gap-4">
+        <div className="w-full lg:w-[320px] xl:w-[360px] shrink-0 flex flex-col gap-4">
           <ReservaSidebarConfig
             materias={materias}
             materiaIdSeleccionada={materiaIdSeleccionada} setMateriaIdSeleccionada={setMateriaIdSeleccionada}
@@ -332,16 +286,15 @@ export default function NuevaReservaPage() {
           />
         </div>
 
-        {/* Grilla Interactiva */}
-        <div className="w-full flex-1 min-w-0 flex flex-col">
-          <div className="pb-3 sm:pb-4 shrink-0">
+        <div className="w-full flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 bg-slate-50/50">
             <CalendarNavigator fechaPivote={fechaPivote} vista={vista} setFechaPivote={setFechaPivote} />
           </div>
 
-          <div className="flex-1 min-h-0 w-full flex flex-col bg-slate-50/30">
+          <div className="w-full flex flex-col">
             {!labSeleccionado ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4 p-8 min-h-[300px]">
-                <div className="w-16 h-16 bg-white shadow-sm rounded-full flex items-center justify-center border border-slate-200/60">
+              <div className="w-full flex flex-col items-center justify-center text-slate-400 gap-4 p-8 min-h-[400px]">
+                <div className="w-16 h-16 bg-slate-50 shadow-sm rounded-full flex items-center justify-center border border-slate-200/60">
                   <MapPin size={30} className="text-slate-400" />
                 </div>
                 <div className="text-center max-w-sm px-4">
@@ -350,7 +303,7 @@ export default function NuevaReservaPage() {
                 </div>
               </div>
             ) : isLoadingGrid ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 min-h-[300px]">
+              <div className="w-full flex flex-col items-center justify-center gap-4 p-8 min-h-[400px]">
                 <div className="p-4 bg-white rounded-full shadow-sm border border-slate-100">
                   <Loader2 size={36} className="animate-spin text-[#001D4A]" />
                 </div>
@@ -358,7 +311,8 @@ export default function NuevaReservaPage() {
               </div>
             ) : (
               <>
-                <div className="flex-1 min-h-0 w-full lg:overflow-auto lg:p-2 xl:p-3 custom-scrollbar">
+                {/* Contenedor con scroll solo horizontal interno */}
+                <div className="w-full overflow-x-auto custom-scrollbar p-2 sm:p-4">
                   <ShiftGridSelector
                     bloques={bloques}
                     fechasVisibles={fechasVisibles}
@@ -371,11 +325,11 @@ export default function NuevaReservaPage() {
                   />
                 </div>
 
-                <div className="p-3 sm:p-4 pt-3 sm:pt-4 shrink-0">
+                <div className="p-4 bg-slate-50/50 border-t border-slate-100">
                   <button
                     onClick={solicitarConfirmacion}
                     disabled={seleccion.length === 0 || !materiaIdSeleccionada || isSubmitting}
-                    className={`w-full text-white font-black py-3.5 px-6 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] shadow-lg flex justify-center items-center gap-3 text-base tracking-wide ${isEditMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#001D4A] hover:bg-[#001D4A]/95'}`}
+                    className={`w-full text-white font-black py-3.5 px-6 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] shadow-md flex justify-center items-center gap-3 text-sm sm:text-base tracking-wide ${isEditMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#001D4A] hover:bg-[#004B87]'}`}
                   >
                     {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : (isEditMode ? <Edit3 size={20} /> : <CalendarCheck size={20} />)}
                     <span>{isSubmitting ? "Procesando..." : (isEditMode ? "Guardar Modificaciones" : "Procesar Reservas")}</span>
