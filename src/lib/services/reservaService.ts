@@ -400,6 +400,7 @@ export const getCalendarioReservas = async (
     filtros?: {
         laboratorioId?: string;
         estado?: string;
+        turno?: string; // 'mañana' | 'mediodia' | 'tarde' | 'noche'
         soloMisReservas?: boolean;
     }
 ) => {
@@ -412,6 +413,9 @@ export const getCalendarioReservas = async (
         if (user) userId = user.id;
     }
 
+    // Usamos !inner en las relaciones obligatorias (docente_id, laboratorio_id y
+    // bloque_horario_id son NOT NULL en el schema) para poder filtrar por turno
+    // sin perder filas y sin cambiar la semántica del listado.
     let query = supabase
         .from("reservas")
         .select(`
@@ -420,9 +424,12 @@ export const getCalendarioReservas = async (
             estado,
             laboratorio_id,
             docente_id,
-            laboratorios(nombre),
+            motivo_rechazo,
+            motivo_cancelacion,
+            laboratorios!inner(nombre),
             materias(nombre),
-            bloques_horarios(hora_inicio, hora_fin, turno)
+            perfiles!inner(nombre_completo),
+            bloques_horarios!inner(hora_inicio, hora_fin, turno)
         `)
         .gte("fecha", inicio)
         .lte("fecha", fin);
@@ -434,11 +441,16 @@ export const getCalendarioReservas = async (
     if (filtros?.estado) {
         query = query.eq("estado", filtros.estado);
     }
+    if (filtros?.turno) {
+        query = query.eq("bloques_horarios.turno", filtros.turno);
+    }
     if (filtros?.soloMisReservas && userId) {
         query = query.eq("docente_id", userId);
     }
 
-    const { data, error } = await query.order("fecha", { ascending: true });
+    const { data, error } = await query
+        .order("fecha", { ascending: true })
+        .order("bloque_horario_id", { ascending: true });
 
     if (error) throw new Error(error.message);
 
@@ -453,6 +465,11 @@ export const getCalendarioReservas = async (
                 laboratorio: reserva.laboratorios?.nombre,
                 materia: reserva.materias?.nombre,
                 turno: reserva.bloques_horarios?.turno,
+                horaInicio: reserva.bloques_horarios?.hora_inicio,
+                horaFin: reserva.bloques_horarios?.hora_fin,
+                docente: reserva.perfiles?.nombre_completo ?? "Docente sin nombre",
+                motivoRechazo: reserva.motivo_rechazo ?? null,
+                motivoCancelacion: reserva.motivo_cancelacion ?? null,
             },
         })) || []
     );

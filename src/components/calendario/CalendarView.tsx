@@ -5,12 +5,31 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { EventContentArg } from "@fullcalendar/core";
-import { MapPin, Clock, AlertCircle } from "lucide-react";
+import { EventContentArg, EventMountArg } from "@fullcalendar/core";
+import { MapPin, Clock, AlertCircle, User, Sunrise, Sun, Sunset, Moon } from "lucide-react";
 
 interface Props {
     events: any[];
 }
+
+// ---------------------------------------------------------------------------
+// Configuración visual por turno (icono + etiqueta corta)
+// ---------------------------------------------------------------------------
+const TURNO_CONFIG: Record<string, { label: string; icon: typeof Sunrise }> = {
+    "mañana": { label: "Mañana", icon: Sunrise },
+    mediodia: { label: "Mediodía", icon: Sun },
+    tarde: { label: "Tarde", icon: Sunset },
+    noche: { label: "Noche", icon: Moon },
+};
+
+// Etiquetas legibles por estado (para el badge y el tooltip nativo)
+const ESTADO_LABEL: Record<string, string> = {
+    aprobada: "Aprobada",
+    pendiente: "Pendiente",
+    pendiente_modificacion: "Modificación pendiente",
+    rechazada: "Rechazada",
+    cancelada: "Cancelada",
+};
 
 export default function CalendarView({ events }: Props) {
     const [vista, setVista] = useState("dayGridMonth");
@@ -32,10 +51,11 @@ export default function CalendarView({ events }: Props) {
     // 🎨 CUSTOM RENDERER: Aquí diseñamos la tarjeta de cada reserva
     const renderEventContent = (eventInfo: EventContentArg) => {
         const { event, timeText } = eventInfo;
-        const { materia, laboratorio, estado } = event.extendedProps;
+        const { materia, laboratorio, estado, turno, docente } = event.extendedProps;
 
-        // Formateo del texto del estado
-        const estadoFormateado = estado ? estado.replace('_', ' ') : 'desconocido';
+        const estadoFormateado = ESTADO_LABEL[estado] ?? estado ?? "Desconocido";
+        const turnoInfo = TURNO_CONFIG[turno] ?? null;
+        const TurnoIcon = turnoInfo?.icon;
 
         return (
             <div className="flex flex-col gap-0.5 p-1.5 w-full h-full overflow-hidden text-slate-800">
@@ -43,14 +63,28 @@ export default function CalendarView({ events }: Props) {
                     <span className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase flex items-center gap-1">
                         <Clock size={9} /> {timeText}
                     </span>
+                    {turnoInfo && (
+                        <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wide flex items-center gap-0.5 opacity-80 shrink-0">
+                            {TurnoIcon && <TurnoIcon size={9} />}
+                            <span className="hidden sm:inline">{turnoInfo.label}</span>
+                        </span>
+                    )}
                 </div>
+
                 <div className="text-[10px] sm:text-xs font-bold leading-tight truncate">
                     {materia || "Sin materia"}
                 </div>
+
                 <div className="text-[9px] sm:text-[10px] font-medium leading-tight truncate flex items-center gap-1 opacity-80">
                     <MapPin size={10} className="shrink-0" />
                     <span className="truncate">{laboratorio || "Sin laboratorio"}</span>
                 </div>
+
+                <div className="text-[9px] sm:text-[10px] font-medium leading-tight truncate flex items-center gap-1 opacity-80">
+                    <User size={10} className="shrink-0" />
+                    <span className="truncate">{docente || "Sin docente"}</span>
+                </div>
+
                 {/* Badge de estado solo visible en vistas amplias (semanal/diaria) */}
                 {vista !== "dayGridMonth" && (
                     <div className="mt-1 flex items-center gap-1 text-[9px] font-black uppercase tracking-wider opacity-80">
@@ -59,6 +93,30 @@ export default function CalendarView({ events }: Props) {
                 )}
             </div>
         );
+    };
+
+    // Tooltip nativo con el detalle completo (útil sobre todo en vista mensual,
+    // donde la tarjeta compacta no alcanza a mostrar todo)
+    const handleEventDidMount = (arg: EventMountArg) => {
+        const { estado, laboratorio, materia, turno, docente, motivoRechazo, motivoCancelacion } =
+            arg.event.extendedProps;
+
+        const turnoInfo = TURNO_CONFIG[turno]?.label ?? turno ?? "";
+        const partes = [
+            `${materia || "Sin materia"} — ${laboratorio || "Sin laboratorio"}`,
+            `Docente: ${docente || "Sin docente"}`,
+            `Turno: ${turnoInfo}`,
+            `Estado: ${ESTADO_LABEL[estado] ?? estado}`,
+        ];
+
+        if (estado === "rechazada" && motivoRechazo) {
+            partes.push(`Motivo de rechazo: ${motivoRechazo}`);
+        }
+        if (estado === "cancelada" && motivoCancelacion) {
+            partes.push(`Motivo de cancelación: ${motivoCancelacion}`);
+        }
+
+        arg.el.setAttribute("title", partes.join("\n"));
     };
 
     return (
@@ -78,6 +136,9 @@ export default function CalendarView({ events }: Props) {
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] sm:text-sm font-bold text-slate-600">
                     <div className="w-3 h-3 shrink-0 rounded-[4px] bg-red-100 border-l-2 border-red-500"></div> Rechazada
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-sm font-bold text-slate-600">
+                    <div className="w-3 h-3 shrink-0 rounded-[4px] bg-slate-200 border-l-2 border-slate-400"></div> Cancelada
                 </div>
             </div>
 
@@ -101,6 +162,7 @@ export default function CalendarView({ events }: Props) {
                     }}
                     events={events}
                     eventContent={renderEventContent}
+                    eventDidMount={handleEventDidMount}
                     dayMaxEvents={3} // Mostrar popover "+X más" si hay muchas reservas
                     slotMinTime="07:00:00"
                     slotMaxTime="22:30:00"

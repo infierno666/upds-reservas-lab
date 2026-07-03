@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import CalendarView from "@/components/calendario/CalendarView";
 import { getCalendarioReservas, getLaboratorios } from "@/lib/services/reservaService";
-import { Loader2, CalendarDays, Filter, MapPin, CheckCircle2, User, ChevronDown } from "lucide-react";
+import { Loader2, CalendarDays, Filter, MapPin, CheckCircle2, User, ChevronDown, Clock3 } from "lucide-react";
 
 export default function CalendarioDocentePage() {
     // Estado del rango del calendario
@@ -16,6 +16,7 @@ export default function CalendarioDocentePage() {
     // Estados de la barra de filtros
     const [labSeleccionado, setLabSeleccionado] = useState<string>("");
     const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
+    const [turnoSeleccionado, setTurnoSeleccionado] = useState<string>("");
     const [soloMisReservas, setSoloMisReservas] = useState<boolean>(false);
 
     // Fetch Catálogo de Laboratorios
@@ -26,10 +27,11 @@ export default function CalendarioDocentePage() {
 
     // Fetch Eventos Dinámicos
     const { data: eventos = [], isLoading } = useQuery({
-        queryKey: ["calendario-docente", rango, labSeleccionado, estadoSeleccionado, soloMisReservas],
+        queryKey: ["calendario-docente", rango, labSeleccionado, estadoSeleccionado, turnoSeleccionado, soloMisReservas],
         queryFn: () => getCalendarioReservas(rango.inicio, rango.fin, {
             laboratorioId: labSeleccionado || undefined,
             estado: estadoSeleccionado || undefined,
+            turno: turnoSeleccionado || undefined,
             soloMisReservas
         }),
     });
@@ -90,6 +92,23 @@ export default function CalendarioDocentePage() {
                             <option value="pendiente_modificacion">🟣 Modificaciones</option>
                             <option value="rechazada">🔴 Rechazadas</option>
                             <option value="cancelada">⚪ Canceladas</option>
+                        </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+
+                    {/* Filtro: Turno */}
+                    <div className="relative w-full sm:w-auto sm:min-w-[170px]">
+                        <Clock3 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <select
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-9 pr-8 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-[#004B87]/30 transition-all appearance-none cursor-pointer hover:bg-slate-100"
+                            value={turnoSeleccionado}
+                            onChange={(e) => setTurnoSeleccionado(e.target.value)}
+                        >
+                            <option value="">Todos los turnos</option>
+                            <option value="mañana">🌅 Mañana</option>
+                            <option value="mediodia">☀️ Mediodía</option>
+                            <option value="tarde">🌇 Tarde</option>
+                            <option value="noche">🌙 Noche</option>
                         </select>
                         <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
