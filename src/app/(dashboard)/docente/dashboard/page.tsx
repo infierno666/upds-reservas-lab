@@ -23,7 +23,6 @@ export default function DocenteDashboard() {
     const cargar = async () => {
       setCargando(true);
       try {
-        // Obtiene el nombre del docente autenticado
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -37,7 +36,6 @@ export default function DocenteDashboard() {
           }
         }
 
-        // Carga KPIs y solicitudes en paralelo
         const [k, sol] = await Promise.all([
           getKPIsDocente(),
           getUltimasSolicitudes(),
@@ -53,50 +51,63 @@ export default function DocenteDashboard() {
     cargar();
   }, []);
 
-  // Skeleton de carga responsive
   if (cargando) return (
-    <div className="p-6 md:p-8 w-full space-y-6">
-      <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="dashboard-shell w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="h-8 w-48 bg-slate-200 rounded-xl animate-pulse" />
+      <div className="kpi-grid grid grid-cols-2 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 bg-slate-100 rounded-2xl animate-pulse" />
+          <div key={i} className="h-[120px] bg-slate-100 rounded-2xl animate-pulse" />
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="h-48 bg-slate-100 rounded-2xl animate-pulse" />
-        <div className="h-48 bg-slate-100 rounded-2xl animate-pulse" />
-        <div className="h-48 bg-slate-100 rounded-2xl animate-pulse lg:col-span-1" />
+      <div className="main-grid grid grid-cols-1 gap-6">
+        <div className="h-[200px] bg-slate-100 rounded-2xl animate-pulse" />
+        <div className="h-[200px] bg-slate-100 rounded-2xl animate-pulse" />
       </div>
-      <div className="h-64 bg-slate-100 rounded-2xl animate-pulse" />
+      <div className="h-[300px] bg-slate-100 rounded-2xl animate-pulse" />
+      <style jsx global>{`
+        .dashboard-shell { container-type: inline-size; container-name: dashboard; }
+        @container dashboard (min-width: 600px) {
+          .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @container dashboard (min-width: 900px) {
+          .main-grid { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); }
+        }
+      `}</style>
     </div>
   );
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto space-y-6">
-      <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-        Hola, {nombreDocente}
-      </h1>
-      <p className="text-slate-500 font-medium mt-1">
-        Aquí tienes el resumen de tus actividades en laboratorios.
-      </p>
+    <div className="dashboard-shell w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 overflow-hidden">
+      <div className="min-w-0 flex flex-col gap-1">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate">
+          Hola, {nombreDocente}
+        </h1>
+        <p className="text-sm sm:text-base text-slate-500 font-medium">
+          Aquí tienes el resumen de tus actividades en laboratorios.
+        </p>
+      </div>
 
-      {/* KPIs — 2 columnas en móvil, 4 en desktop */}
-      {kpis && <StatsCardsDocente kpis={kpis} />}
-
-      {/* Fila principal — stack en móvil, 3 columnas en desktop */}
+      {/* Eliminamos el grid interno forzado y dejamos que el contenedor CSS lo controle */}
       {kpis && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Próxima reserva — ocupa 2 columnas en desktop */}
-          <div className="md:col-span-2">
-            <ProximaReserva kpis={kpis} />
-          </div>
-          {/* Acciones rápidas */}
-          <AccionesRapidas />
+        <div className="w-full">
+          <StatsCardsDocente kpis={kpis} />
         </div>
       )}
 
-      {/* Últimas solicitudes — tabla en desktop, cards en móvil */}
-      <UltimasSolicitudes solicitudes={solicitudes} />
+      {kpis && (
+        <div className="main-grid grid grid-cols-1 gap-6 items-stretch">
+          <div className="main-col-primary min-w-0 h-full">
+            <ProximaReserva kpis={kpis} />
+          </div>
+          <div className="min-w-0 h-full">
+            <AccionesRapidas />
+          </div>
+        </div>
+      )}
+
+      <div className="w-full min-w-0 overflow-hidden">
+        <UltimasSolicitudes solicitudes={solicitudes} />
+      </div>
 
       {error && (
         <CustomModal isOpen={!!error} type="error"
@@ -104,6 +115,32 @@ export default function DocenteDashboard() {
           message={error}
           onClose={() => setError(null)} />
       )}
+
+      <style jsx global>{`
+        .dashboard-shell {
+          container-type: inline-size;
+          container-name: dashboard;
+        }
+
+        /* Responsive interno basado en el ESPACIO DISPONIBLE, no en la pantalla */
+        @container dashboard (min-width: 600px) {
+          .kpi-grid { 
+            grid-template-columns: repeat(4, minmax(0, 1fr)); 
+          }
+        }
+
+        @container dashboard (min-width: 950px) {
+          .main-grid {
+            grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+          }
+        }
+
+        @container dashboard (min-width: 1280px) {
+          .main-grid {
+            grid-template-columns: minmax(0, 2.5fr) minmax(350px, 1fr);
+          }
+        }
+      `}</style>
     </div>
   );
 }

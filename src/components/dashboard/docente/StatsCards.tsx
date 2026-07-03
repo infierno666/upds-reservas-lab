@@ -44,17 +44,24 @@ export function StatsCardsDocente({ kpis }: StatsCardsDocenteProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    // Reemplazado lg:grid-cols-4 por la clase kpi-grid para usar Container Queries
+    <div className="kpi-grid grid grid-cols-2 gap-4 w-full">
       {cards.map((card, i) => (
-        <div key={i} className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-sm">
-          <div className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center mb-3`}>
-            <card.icon size={18} className={card.color} />
+        <div key={i} className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <div className={`w-10 h-10 rounded-xl ${card.bg} flex items-center justify-center mb-4`}>
+              <card.icon size={20} className={card.color} />
+            </div>
+            <p className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1 line-clamp-1">
+              {card.titulo}
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-slate-800 truncate">
+              {card.valor}
+            </p>
           </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
-            {card.titulo}
+          <p className="text-xs text-slate-500 font-medium mt-2 truncate">
+            {card.sub}
           </p>
-          <p className="text-xl font-black text-slate-800 truncate">{card.valor}</p>
-          <p className="text-xs text-slate-500 font-medium mt-1 truncate">{card.sub}</p>
         </div>
       ))}
     </div>
